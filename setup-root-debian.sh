@@ -19,6 +19,7 @@ main()
   setup_ssh
   setup_sudo
   setup_packages
+  setup_virtualbox_guest_additions
 }
 
 setup_network()
@@ -154,6 +155,25 @@ setup_packages()
   done
 }
 
+setup_virtualbox_guest_additions()
+{
+  if ask "Do you want to install virtualbox guest additions ?" && ask "Mounted guest additions cd-rom ?"; then
+    if not_installed module-assistant; then
+      apt-get -qq install module-assistant
+    fi
+
+    if installed virtualbox-guest-utils; then
+      apt-get purge virtualbox-guest-utils
+      apt-get autoremove
+    fi
+
+    m-a prepare
+    mount -r /media/cdrom && sh /media/cdrom/VBoxLinuxAdditions.run && umount /media/cdrom
+
+    success "setup virtualbox guest additions"
+  fi
+}
+
 match()
 {
   local readonly expression="$1"
@@ -203,6 +223,20 @@ installed()
 not_installed()
 {
   if ! installed "$1"; then
+    return 0
+  else
+    return 1
+  fi
+}
+
+ask()
+{
+  local input
+
+  echo -n "\033[1;33m[ask] $1 (yes/no)>\033[0m "
+  read input
+
+  if [ "$input" = "yes" ]; then
     return 0
   else
     return 1
