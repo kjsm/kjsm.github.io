@@ -26,7 +26,7 @@ setup_network()
 {
   if not_match "$HOST_ADDRESS" /etc/network/interfaces; then
     cp /etc/network/interfaces /etc/network/interfaces.orig
-    cat > "/etc/network/interfaces" <<'__END__'
+    cat > /etc/network/interfaces <<__END__
 # The loopback network interface
 auto lo
 iface lo inet loopback
@@ -163,7 +163,7 @@ setup_virtualbox_guest_additions()
     fi
 
     if installed virtualbox-guest-utils; then
-      apt-get purge virtualbox-guest-utils
+      apt-get -qq purge virtualbox-guest-utils
       apt-get autoremove
     fi
 
