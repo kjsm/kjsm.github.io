@@ -95,7 +95,9 @@ setup_misc()
 
   # add backports to apt-line
   if not_match 'wheezy-backports' /etc/apt/sources.list; then
-    echo -e "\n# backports\ndeb http://ftp.debian.org/debian/ wheezy-backports main contrib non-free" > /etc/apt/sources.list
+    cp /etc/apt/sources.list /etc/apt/sources.list.orig
+    echo "\n# backports\ndeb http://ftp.debian.org/debian/ wheezy-backports main contrib non-free" >> /etc/apt/sources.list
+    apt-get update
     success "add backports to apt-line"
   fi
 }
@@ -125,7 +127,7 @@ setup_sudo()
   if not_match "$USERNAME" /etc/sudoers; then
     chmod 600 /etc/sudoers
     cp /etc/sudoers /etc/sudoers.orig
-    echo -e "\nroot ALL=(ALL) NOPASSWD: ALL\n$USERNAME ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+    echo "\nroot ALL=(ALL) NOPASSWD: ALL\n$USERNAME ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
     chmod 440 /etc/sudoers
     success "setup sudo"
   fi
