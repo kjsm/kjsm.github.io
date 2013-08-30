@@ -1,0 +1,42 @@
+d-i debian-installer/locale string ja_JP.UTF-8
+d-i debian-installer/language string ja
+d-i debian-installer/country string JP
+d-i keymap select jp106
+
+d-i netcfg/choose_interface select auto
+d-i netcfg/get_hostname string unassigned-hostname
+d-i netcfg/get_domain string unassigned-domain
+d-i netcfg/wireless_wep string
+
+#d-i mirror/protocol string http
+d-i mirror/country string JP
+d-i mirror/http/hostname string ftp.jp.debian.org
+d-i mirror/http/directory string /debian
+d-i mirror/http/proxy string
+
+#d-i passwd/make-user boolean false
+d-i passwd/root-password password root
+d-i passwd/root-password-again password root
+d-i passwd/user-fullname string vagrant
+d-i passwd/username string vagrant
+d-i passwd/user-password password vagrant
+d-i passwd/user-password-again password vagrant
+
+d-i clock-setup/utc boolean true
+d-i time/zone string Japan
+d-i clock-setup/ntp boolean true
+
+d-i partman-auto/method string regular
+d-i partman-auto/choose_recipe select atomic
+d-i partman-partitioning/confirm_write_new_label boolean true
+d-i partman/choose_partition select finish
+d-i partman/confirm boolean true
+d-i partman/confirm_nooverwrite boolean true
+
+tasksel tasksel/first multiselect standard
+
+d-i finish-install/reboot_in_progress note
+d-i debian-installer/exit/halt boolean true
+#d-i debian-installer/exit/poweroff boolean true
+
+# vim: filetype=config
