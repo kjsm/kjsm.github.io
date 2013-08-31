@@ -94,7 +94,7 @@ setup_packages()
   for package in zlib1g-dev libssl-dev libreadline-dev libmysqlclient-dev libsqlite3-dev libxml2-dev libxslt1-dev;
   do
     if not_installed $package; then
-      apt-get -qq install $package
+      sudo apt-get -qq install $package
       success "install $package"
     fi
   done
