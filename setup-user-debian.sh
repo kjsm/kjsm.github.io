@@ -39,7 +39,7 @@ setup_ssh_keys()
         read input
 
         if [ -n "$input" ]; then
-          $input >> $authorized_keys_path
+          echo "$input" >> $authorized_keys_path
           success "add public key of host os"
         fi
       fi
