@@ -9,13 +9,12 @@ main()
 
   setup_ssh_keys
   setup_dotfiles
-  setup_zsh
-  setup_nvm
-  setup_rbenv
   setup_packages
   setup_mysql
   setup_nginx
+  setup_nvm
   setup_node $install_node_version
+  setup_rbenv
   setup_ruby $install_ruby_version
 }
 
@@ -81,47 +80,12 @@ setup_dotfiles()
     cd
 
     $dotfiles_dir/script/dotfiles_linker.sh link
-
     success "setup dotfiles"
-  fi
-}
 
-setup_zsh()
-{
-  if [ `basename $SHELL` != "zsh" ] && ask "Change shell to zsh ?"; then
-    sudo sed -i -e "s/^\($USER:.\+\):.\+/\1:\/usr\/bin\/zsh/" /etc/passwd
-    success "change default shell to zsh"
-  fi
-}
-
-setup_nvm()
-{
-  if [ ! -d $HOME/.nvm ]; then
-    git clone git://github.com/creationix/nvm.git ~/.nvm
-    bash -c "source $HOME/.nvm/nvm.sh"
-    success "setup nvm"
-  fi
-}
-
-setup_rbenv()
-{
-  local readonly rbenv_dir="$HOME/.rbenv"
-  local readonly rbenv_plugins_dir="$HOME/.rbenv/plugins"
-
-  if [ ! -d $rbenv_dir ]; then
-    git clone git://github.com/sstephenson/rbenv.git $rbenv_dir
-    mkdir $rbenv_plugins_dir
-    success "install rbenv"
-  fi
-
-  if [ ! -d $rbenv_plugins_dir/ruby-build ]; then
-    git clone git://github.com/sstephenson/ruby-build.git $rbenv_plugins_dir/ruby-build
-    success "install ruby-build"
-  fi
-
-  if [ ! -d $rbenv_plugins_dir/rbenv-gemset ]; then
-    git clone git://github.com/jamis/rbenv-gemset.git $rbenv_plugins_dir/rbenv-gemset
-    success "install rbenv-gemset"
+    if [ `basename $SHELL` != "zsh" ]; then
+      sudo sed -i -e "s/^\($USER:.\+\):.\+/\1:\/usr\/bin\/zsh/" /etc/passwd
+      success "change default shell to zsh"
+    fi
   fi
 }
 
@@ -174,6 +138,14 @@ setup_nginx()
   fi
 }
 
+setup_nvm()
+{
+  if [ ! -d $HOME/.nvm ]; then
+    git clone git://github.com/creationix/nvm.git ~/.nvm
+    success "setup nvm"
+  fi
+}
+
 setup_node()
 {
   local readonly version="$1"
@@ -189,10 +161,30 @@ setup_node()
   fi
 
   if [ ! -d $HOME/.nvm/$version ]; then
-    nvm install "v$version"
-    nvm use $version
-    nvm alias default $version
+    bash -c "source $HOME/.nvm/nvm.sh && nvm install $version && nvm use $version && nvm alias default $version"
     success "install node $version (nvm)"
+  fi
+}
+
+setup_rbenv()
+{
+  local readonly rbenv_dir="$HOME/.rbenv"
+  local readonly rbenv_plugins_dir="$HOME/.rbenv/plugins"
+
+  if [ ! -d $rbenv_dir ]; then
+    git clone git://github.com/sstephenson/rbenv.git $rbenv_dir
+    mkdir $rbenv_plugins_dir
+    success "install rbenv"
+  fi
+
+  if [ ! -d $rbenv_plugins_dir/ruby-build ]; then
+    git clone git://github.com/sstephenson/ruby-build.git $rbenv_plugins_dir/ruby-build
+    success "install ruby-build"
+  fi
+
+  if [ ! -d $rbenv_plugins_dir/rbenv-gemset ]; then
+    git clone git://github.com/jamis/rbenv-gemset.git $rbenv_plugins_dir/rbenv-gemset
+    success "install rbenv-gemset"
   fi
 }
 
@@ -211,6 +203,7 @@ setup_ruby()
   fi
 
   if [ ! -d $HOME/.rbenv/versions/$version ]; then
+    export PATH="$HOME/.rbenv/shims:$HOME/.rbenv/bin:$PATH"
     rbenv install $version
     rbenv rehash
     rbenv global $version
