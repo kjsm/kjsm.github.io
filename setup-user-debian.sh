@@ -53,7 +53,10 @@ setup_ssh_keys()
       fi
     fi
 
-    echo "\nregister the public key to your repository hosting site\n"
+    echo "Please register the public key to your repository hosting site"
+    echo
+    cat $public_key_path
+    echo
     exit 0
   fi
 }
@@ -86,6 +89,9 @@ setup_dotfiles()
       sudo sed -i -e "s/^\($USER:.\+\):.\+/\1:\/usr\/bin\/zsh/" /etc/passwd
       success "change default shell to zsh"
     fi
+
+    echo "Please login again, and check keychain, zsh, tmux, and vim"
+    exit 0
   fi
 }
 
