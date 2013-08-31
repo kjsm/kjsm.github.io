@@ -92,20 +92,17 @@ setup_rbenv()
 
   if [ ! -d $rbenv_dir ]; then
     git clone git://github.com/sstephenson/rbenv.git $rbenv_dir
-    rehash
     mkdir $rbenv_plugins_dir
     success "install rbenv"
   fi
 
   if [ ! -d $rbenv_plugins_dir/ruby-build ]; then
     git clone git://github.com/sstephenson/ruby-build.git $rbenv_plugins_dir/ruby-build
-    rehash
     success "install ruby-build"
   fi
 
   if [ ! -d $rbenv_plugins_dir/rbenv-gemset ]; then
     git clone git://github.com/jamis/rbenv-gemset.git $rbenv_plugins_dir/rbenv-gemset
-    rehash
     success "install rbenv-gemset"
   fi
 }
