@@ -69,14 +69,12 @@ setup_packages()
   if [ ! -f /etc/yum.repos.d/rpmforge.repo ]; then
     curl -sL http://pkgs.repoforge.org/rpmforge-release/rpmforge-release-0.5.3-1.el6.rf.i686.rpm -o rpmforge.rpm && rpm -Uv rpmforge.rpm && rm rpmforge.rpm
     sed -i -e "s/enabled = 1/enabled = 0/g" /etc/yum.repos.d/rpmforge.repo
-    yum -y update
     success "add rpmforge repository"
   fi
 
   if [ ! -f /etc/yum.repos.d/epel.repo ]; then
     curl -sL http://dl.fedoraproject.org/pub/epel/6/i386/epel-release-6-8.noarch.rpm -o epel.rpm && rpm -Uv epel.rpm && rm epel.rpm
     sed -i -e "s/enabled=1/enabled=0/g" /etc/yum.repos.d/epel.repo
-    yum -y update
     success "add epel repository"
   fi
 
@@ -95,6 +93,11 @@ setup_packages()
       success "install $package"
     fi
   done
+
+  if ask "Update packages immediately ?"; then
+    yum -y update
+    success "update packages"
+  fi
 }
 
 match()
