@@ -25,7 +25,6 @@ poweroff
 
 %packages --nobase
 @core
-wget
 -selinux-policy-targeted
 %end
 
@@ -47,6 +46,10 @@ network --onboot yes --device eth0 --bootproto dhcp --noipv6 --hostname $HOSTNAM
 network --onboot yes --device eth1 --bootproto static --ip $IP_ADDRESS --netmask 255.255.255.0 --gateway 192.168.56.1 --noipv6 --hostname $HOSTNAME
 __END__
 
+%end
+
+%post --log=/root/anaconda-post.log --erroronfail
+yum -y install wget
 %end
 
 # vim: filetype=kickstart
