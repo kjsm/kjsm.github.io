@@ -25,6 +25,7 @@ poweroff
 
 %packages --nobase
 @core
+wget
 -selinux-policy-targeted
 %end
 
