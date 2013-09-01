@@ -41,7 +41,7 @@ done
 [ -z "$HOSTNAME" ] && HOSTNAME="localhost.localdomain"
 [ -z "$IP_ADDRESS" ] && IP_ADDRESS="192.168.56.50"
 
-cat > /tmp/network.fs <<__END__
+cat > /tmp/network.ks <<__END__
 network --onboot yes --device eth0 --bootproto dhcp --noipv6 --hostname $HOSTNAME
 network --onboot yes --device eth1 --bootproto static --ip $IP_ADDRESS --netmask 255.255.255.0 --gateway 192.168.56.1 --noipv6 --hostname $HOSTNAME
 __END__
