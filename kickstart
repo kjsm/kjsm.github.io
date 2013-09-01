@@ -3,15 +3,15 @@ cdrom
 text
 lang ja_JP.UTF-8
 keyboard jp106
-network --onboot yes --device eth0 --bootproto dhcp --noipv6
-network --onboot yes --device eth1 --bootproto static --ip 192.168.56.50 --netmask 255.255.255.0 --gateway 192.168.56.1 --noipv6 --hostname centos64
+
+%include /tmp/network.ks
+
 rootpw root
 firewall --disabled
 authconfig --enableshadow --passalgo=sha512
 selinux --disabled
 timezone Asia/Tokyo
 bootloader --location=mbr --driveorder=sda --append="crashkernel=auto rhgb quiet"
-
 zerombr yes
 clearpart --all --drives=sda
 part /boot --fstype=ext4 --size=200
@@ -19,16 +19,33 @@ part pv.1 --grow --size=1
 volgroup vg0 --pesize=4096 pv.1
 logvol / --fstype=ext4 --name=lv_root --vgname=vg0 --grow --size=6664
 logvol swap --name=lv_swap --vgname=vg0 --size=1024
-
 repo --name="CentOS" --baseurl=file:///mnt/source --cost=100
-
 services --disabled auditd,blk-availability,ip6tables,iptables,iscsi,iscsid,lvm2-monitor,mdmonitor,netfs
-
-halt
+poweroff
 
 %packages --nobase
 @core
 -selinux-policy-targeted
+%end
+
+%pre
+#!/bin/sh
+
+for x in `cat /proc/cmdline`; do
+  case $x in
+    HOSTNAME*)   eval $x;;
+    IP_ADDRESS*) eval $x;;
+  esac;
+done
+
+[ -z "$HOSTNAME" ] && HOSTNAME="localhost.localdomain"
+[ -z "$IP_ADDRESS" ] && IP_ADDRESS="192.168.56.50"
+
+cat > /tmp/network.fs <<__END__
+network --onboot yes --device eth0 --bootproto dhcp --noipv6 --hostname $HOSTNAME
+network --onboot yes --device eth1 --bootproto static --ip $IP_ADDRESS --netmask 255.255.255.0 --gateway 192.168.56.1 --noipv6 --hostname $HOSTNAME
+__END__
+
 %end
 
 # vim: filetype=kickstart
