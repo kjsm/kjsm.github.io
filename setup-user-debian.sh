@@ -184,11 +184,6 @@ setup_node()
 {
   local readonly version="$1"
 
-  if [ ! -d $HOME/.nvm ]; then
-    error "not installed nvm"
-    exit 1
-  fi
-
   if [ -z "$version" ]; then
     error "not given node version"
     exit 1
@@ -196,6 +191,11 @@ setup_node()
 
   if [ -d $HOME/.nvm/$version ] || ! ask "Install node $version by nvm ?"; then
     return 0
+  fi
+
+  if [ ! -d $HOME/.nvm ]; then
+    error "not installed nvm"
+    exit 1
   fi
 
   if [ ! -d $HOME/.nvm/$version ]; then
@@ -234,11 +234,6 @@ setup_ruby()
 {
   local readonly version="$1"
 
-  if [ ! -d $HOME/.rbenv ]; then
-    error "not installed rbenv"
-    exit 1
-  fi
-
   if [ -z "$version" ]; then
     error "not given ruby version"
     exit 1
@@ -246,6 +241,11 @@ setup_ruby()
 
   if [ -d $HOME/.rbenv/versions/$version ] || ! ask "Install ruby $version by rbenv ?"; then
     return 0
+  fi
+
+  if [ ! -d $HOME/.rbenv ]; then
+    error "not installed rbenv"
+    exit 1
   fi
 
   if [ ! -d $HOME/.rbenv/versions/$version ]; then
