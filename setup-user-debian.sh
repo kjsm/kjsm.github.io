@@ -26,6 +26,8 @@ setup_ssh_keys()
   local readonly authorized_keys_path="$ssh_dir/authorized_keys"
 
   if [ ! -d $ssh_dir ]; then
+    local input
+
     # generate ssh key
     if [ ! -f $private_key_path ]; then
       ssh-keygen -t rsa -f $private_key_path -N "" -C "$USER@`uname -n`"
@@ -34,6 +36,7 @@ setup_ssh_keys()
 
     # create authorized_keys file
     if [ ! -f $authorized_keys_path ]; then
+
       mkdir -p $ssh_dir
       cat $public_key_path >> $authorized_keys_path
       chmod 600 $authorized_keys_path
@@ -42,8 +45,6 @@ setup_ssh_keys()
       # add public key of host os
       if ask "Add public key of host os to authorized_keys ?"; then
         echo "Input public key of host os\n"
-
-        local input
         read input
 
         if [ -n "$input" ]; then
@@ -57,7 +58,9 @@ setup_ssh_keys()
     echo
     cat $public_key_path
     echo
-    exit 0
+
+    echo "(Press enter to continue)"
+    read input
   fi
 }
 
