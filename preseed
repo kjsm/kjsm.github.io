@@ -17,8 +17,8 @@ d-i passwd/root-password password root
 d-i passwd/root-password-again password root
 #d-i passwd/user-fullname string username
 #d-i passwd/username string username
-d-i passwd/user-password password insecure
-d-i passwd/user-password-again password insecure
+d-i passwd/user-password password user
+d-i passwd/user-password-again password user
 
 d-i clock-setup/utc boolean true
 d-i time/zone string Japan

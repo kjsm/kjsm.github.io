@@ -233,10 +233,10 @@ ask()
 {
   local input
 
-  echo -n "\033[1;33m[ask] $1 (yes/no)>\033[0m "
+  echo -n "\033[1;33m[ask] $1 (y/n)>\033[0m "
   read input
 
-  if [ "$input" = "yes" ]; then
+  if [ "$input" = "y" ]; then
     return 0
   else
     return 1

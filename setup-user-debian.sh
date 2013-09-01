@@ -257,20 +257,6 @@ setup_ruby()
   fi
 }
 
-ask()
-{
-  local input
-
-  echo -n "\033[1;33m[ask] $1 (y/n)>\033[0m "
-  read input
-
-  if [ "$input" = "y" ]; then
-    return 0
-  else
-    return 1
-  fi
-}
-
 installed()
 {
   local package="$1"
@@ -290,6 +276,20 @@ installed()
 not_installed()
 {
   if ! installed "$1"; then
+    return 0
+  else
+    return 1
+  fi
+}
+
+ask()
+{
+  local input
+
+  echo -n "\033[1;33m[ask] $1 (y/n)>\033[0m "
+  read input
+
+  if [ "$input" = "y" ]; then
     return 0
   else
     return 1
