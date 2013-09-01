@@ -84,10 +84,23 @@ setup_dotfiles()
     git submodule init
     git submodule update
     cd
+    success "setup vim plugins"
 
+    # create symlinks for dotfiles
     $dotfiles_dir/script/dotfiles_linker.sh link
-    success "setup dotfiles"
+    success "create symlinks for dotfiles"
 
+    # create .gitconfig.local
+    if [ ! -f $HOME/.gitconfig.local ]; then
+      cat > $HOME/.gitconfig.local <<__END__
+[user]
+  name = $USER
+  email = $USER@`uname -n`
+__END__
+      success "create .gitconfig.local"
+    fi
+
+    # change shell to zsh
     if [ `basename $SHELL` != "zsh" ]; then
       sudo sed -i -e "s/^\($USER:.\+\):.\+/\1:\/usr\/bin\/zsh/" /etc/passwd
       success "change default shell to zsh"
