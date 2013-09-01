@@ -124,6 +124,10 @@ setup_packages()
 
 setup_mysql()
 {
+  if installed mysql-server || ! ask "Install mysql ?"; then
+    return 0
+  fi
+
   if not_installed mysql-server; then
     sudo DEBIAN_FRONTEND=noninteractive apt-get -qq install mysql-server
     success "install mysql"
@@ -149,6 +153,10 @@ __END__"
 
 setup_nginx()
 {
+  if installed nginx || ! ask "Install nginx ?"; then
+    return 0
+  fi
+
   if not_installed nginx; then
     sudo apt-get -qq install nginx
     success "install nginx"
@@ -162,6 +170,10 @@ setup_nginx()
 
 setup_nvm()
 {
+  if [ -d $HOME/.nvm ] || ! ask "Install nvm ?"; then
+    return 0
+  fi
+
   if [ ! -d $HOME/.nvm ]; then
     git clone git://github.com/creationix/nvm.git ~/.nvm
     success "setup nvm"
@@ -182,6 +194,10 @@ setup_node()
     exit 1
   fi
 
+  if [ -d $HOME/.nvm/$version ] || ! ask "Install node $version by nvm ?"; then
+    return 0
+  fi
+
   if [ ! -d $HOME/.nvm/$version ]; then
     bash -c "source $HOME/.nvm/nvm.sh && nvm install $version && nvm use $version && nvm alias default $version"
     success "install node $version (nvm)"
@@ -192,6 +208,10 @@ setup_rbenv()
 {
   local readonly rbenv_dir="$HOME/.rbenv"
   local readonly rbenv_plugins_dir="$HOME/.rbenv/plugins"
+
+  if [ -d $rbenv_dir ] || ! ask "Install rbenv ?"; then
+    return 0
+  fi
 
   if [ ! -d $rbenv_dir ]; then
     git clone git://github.com/sstephenson/rbenv.git $rbenv_dir
@@ -224,6 +244,10 @@ setup_ruby()
     exit 1
   fi
 
+  if [ -d $HOME/.rbenv/versions/$version ] || ! ask "Install ruby $version by rbenv ?"; then
+    return 0
+  fi
+
   if [ ! -d $HOME/.rbenv/versions/$version ]; then
     export PATH="$HOME/.rbenv/shims:$HOME/.rbenv/bin:$PATH"
     rbenv install $version
@@ -237,10 +261,10 @@ ask()
 {
   local input
 
-  echo -n "\033[1;33m[ask] $1 (yes/no)>\033[0m "
+  echo -n "\033[1;33m[ask] $1 (y/n)>\033[0m "
   read input
 
-  if [ "$input" = "yes" ]; then
+  if [ "$input" = "y" ]; then
     return 0
   else
     return 1
