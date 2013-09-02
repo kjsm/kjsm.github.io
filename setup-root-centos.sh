@@ -159,7 +159,7 @@ ask()
 {
   local input
 
-  echo -n "\033[1;33m[ask] $1 (y/n)>\033[0m "
+  echo -n "[ask] $1 (y/n)> "
   read input
 
   if [ "$input" = "y" ]; then
