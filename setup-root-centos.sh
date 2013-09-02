@@ -18,6 +18,7 @@ main()
   setup_misc
   setup_sudo
   setup_packages
+  setup_virtualbox_guest_additions
 }
 
 setup_user()
@@ -78,7 +79,7 @@ setup_packages()
     success "add epel repository"
   fi
 
-  for package in wget git zsh vim zip unzip;
+  for package in wget git zsh vim zip unzip gcc make;
   do
     if not_installed $package; then
       yum -y install $package
@@ -97,6 +98,18 @@ setup_packages()
   if ask "Update packages immediately ?"; then
     yum -y update
     success "update packages"
+  fi
+}
+
+setup_virtualbox_guest_additions()
+{
+  if ask "Do you want to install virtualbox guest additions ?" && ask "Mounted guest additions cd-rom ?"; then
+    if not_installed kernel-devel; then
+      yum -y install kernel-devel
+    fi
+
+    mount -r /media/cdrom && sh /media/cdrom/VBoxLinuxAdditions.run && umount /media/cdrom
+    success "setup virtualbox guest additions"
   fi
 }
 
