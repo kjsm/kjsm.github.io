@@ -79,7 +79,7 @@ setup_packages()
     success "add epel repository"
   fi
 
-  for package in wget git zsh vim zip unzip gcc make;
+  for package in wget git zsh vim zip unzip gcc make patch;
   do
     if not_installed $package; then
       yum -y install $package
@@ -103,12 +103,41 @@ setup_packages()
 
 setup_virtualbox_guest_additions()
 {
-  if ask "Do you want to install virtualbox guest additions ?" && ask "Mounted guest additions cd-rom ?"; then
-    if not_installed kernel-devel; then
-      yum -y install kernel-devel
+  if ask "Do you want to install virtualbox guest additions ?"; then
+    local readonly install_kernel_devel="kernel-devel-`uname -r`"
+    local input
+
+    echo -e "Please mount guest additions cd-rom (Devices > Install Guest Additions)\n\n(Press enter to continue)"
+    read input
+
+    if not_installed $install_kernel_devel; then
+      yum -y install $install_kernel_devel
+      success "install $install_kernel_devel"
     fi
 
-    mount -r /media/cdrom && sh /media/cdrom/VBoxLinuxAdditions.run && umount /media/cdrom
+    mkdir -p /mnt/cdrom
+    mount -r /dev/cdrom /mnt/cdrom
+    sh /mnt/cdrom/VBoxLinuxAdditions.run
+    umount /mnt/cdrom
+
+    # patch for virtualbox 4.2.4 (https://www.virtualbox.org/ticket/11586)
+    if [ -f /opt/VBoxGuestAdditions-4.2.4/src/vboxguest-4.2.4/vboxvideo/vboxvideo_drm.c ]; then
+      patch -d /opt/VBoxGuestAdditions-4.2.4/src/vboxguest-4.2.4/vboxvideo -u <<__END__
+--- vboxvideo_drm.c.orig  2013-09-02 12:52:10.102252738 +0900
++++ vboxvideo_drm.c 2013-09-02 12:53:02.877636281 +0900
+@@ -107,7 +107,7 @@
+     /* .driver_features = DRIVER_USE_MTRR, */
+     .load = vboxvideo_driver_load,
+ #if LINUX_VERSION_CODE < KERNEL_VERSION(3, 6, 0)
+-    .reclaim_buffers = drm_core_reclaim_buffers,
++    //.reclaim_buffers = drm_core_reclaim_buffers,
+ #endif
+     /* As of Linux 2.6.37, always the internal functions are used. */
+ #if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 37) && !defined(DRM_RHEL61)
+__END__
+      /etc/init.d/vboxadd setup
+    fi
+
     success "setup virtualbox guest additions"
   fi
 }
