@@ -15,9 +15,9 @@ main()
   fi
 
   setup_user
-  setup_misc
   setup_sudo
-  setup_packages
+  setup_system
+  setup_repositories
   setup_virtualbox_guest_additions
 }
 
@@ -36,7 +36,17 @@ setup_user()
   fi
 }
 
-setup_misc()
+setup_sudo()
+{
+  if not_match "$USERNAME" /etc/sudoers; then
+    chmod 600 /etc/sudoers
+    echo -e "\nroot ALL=(ALL) NOPASSWD: ALL\n$USERNAME ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+    chmod 440 /etc/sudoers
+    success "setup sudo"
+  fi
+}
+
+setup_system()
 {
   # disable unnecessary consoles
   if match '^ACTIVE_CONSOLES=/dev/tty\[1-6\]' /etc/sysconfig/init; then
@@ -55,65 +65,36 @@ __END__
   fi
 }
 
-setup_sudo()
-{
-  if not_match "$USERNAME" /etc/sudoers; then
-    chmod 600 /etc/sudoers
-    echo -e "\nroot ALL=(ALL) NOPASSWD: ALL\n$USERNAME ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
-    chmod 440 /etc/sudoers
-    success "setup sudo"
-  fi
-}
-
-setup_packages()
+setup_repositories()
 {
   if [ ! -f /etc/yum.repos.d/rpmforge.repo ]; then
     curl -sL http://pkgs.repoforge.org/rpmforge-release/rpmforge-release-0.5.3-1.el6.rf.i686.rpm -o rpmforge.rpm && rpm -Uv rpmforge.rpm && rm rpmforge.rpm
     sed -i -e "s/enabled = 1/enabled = 0/g" /etc/yum.repos.d/rpmforge.repo
-    success "add rpmforge repository"
+    success "setup rpmforge repository"
   fi
 
   if [ ! -f /etc/yum.repos.d/epel.repo ]; then
     curl -sL http://dl.fedoraproject.org/pub/epel/6/i386/epel-release-6-8.noarch.rpm -o epel.rpm && rpm -Uv epel.rpm && rm epel.rpm
     sed -i -e "s/enabled=1/enabled=0/g" /etc/yum.repos.d/epel.repo
-    success "add epel repository"
-  fi
-
-  for package in wget git zsh vim zip unzip gcc make patch;
-  do
-    if not_installed $package; then
-      yum -y install $package
-      success "install $package"
-    fi
-  done
-
-  for package in keychain tig tmux;
-  do
-    if not_installed $package; then
-      yum -y --enablerepo=rpmforge install $package
-      success "install $package"
-    fi
-  done
-
-  if ask "Update packages immediately ?"; then
-    yum -y update
-    success "update packages"
+    success "setup epel repository"
   fi
 }
 
 setup_virtualbox_guest_additions()
 {
-  if ask "Do you want to install virtualbox guest additions ?"; then
+  if ask "Install virtualbox guest additions ?"; then
     local readonly install_kernel_devel="kernel-devel-`uname -r`"
     local input
 
     echo -e "Please mount guest additions cd-rom (Devices > Install Guest Additions)\n\n(Press enter to continue)"
     read input
 
-    if not_installed $install_kernel_devel; then
-      yum -y install $install_kernel_devel
-      success "install $install_kernel_devel"
-    fi
+    for package in $install_kernel_devel gcc make patch;
+    do
+      if not_installed $package; then
+        install $package
+      fi
+    done
 
     mkdir -p /mnt/cdrom
     mount -r /dev/cdrom /mnt/cdrom
@@ -135,6 +116,8 @@ setup_virtualbox_guest_additions()
      /* As of Linux 2.6.37, always the internal functions are used. */
  #if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 37) && !defined(DRM_RHEL61)
 __END__
+      success "patch vboxvideo_drm.c"
+
       /etc/init.d/vboxadd setup
     fi
 
@@ -172,6 +155,19 @@ not_match()
   fi
 }
 
+install()
+{
+  local readonly package="$1"
+
+  if [ -z "$package" ]; then
+    error "Not given package name"
+    exit 1
+  fi
+
+  yum -q -y install $package
+  success "install $package"
+}
+
 installed()
 {
   local package="$1"
@@ -201,7 +197,7 @@ ask()
 {
   local input
 
-  echo -n "[ask] $1 (y/n)> "
+  echo -n -e "\033[1;33m[ask] $1 (y/n)>\033[0m "
   read input
 
   if [ "$input" = "y" ]; then
@@ -213,12 +209,12 @@ ask()
 
 success()
 {
-  echo "[success] $1"
+  echo -e "\033[1;32m[success] $1\033[0m"
 }
 
 error()
 {
-  echo "[error] $1"
+  echo -e "\033[1;31m[error] $1\033[0m"
 }
 
 help()
