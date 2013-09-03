@@ -48,8 +48,4 @@ __END__
 
 %end
 
-%post --log=/root/anaconda-post.log --erroronfail
-yum -y install wget
-%end
-
 # vim: filetype=kickstart
