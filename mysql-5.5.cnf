@@ -1,0 +1,64 @@
+[client]
+port = 3306
+socket = /var/lib/mysql/mysql.sock
+
+[mysql]
+no-auto-rehash
+#safe-updates
+default_character_set = utf8
+
+[mysqld]
+user = mysql
+port = 3306
+datadir = /var/lib/mysql
+socket = /var/lib/mysql/mysql.sock
+skip-external-locking
+#skip-networking
+bind-address = 127.0.0.1
+character-set-server = utf8
+default-storage-engine = InnoDB
+slow_query_log = 1
+long_query_time = 3
+log_slow_slave_statements = 1
+
+key_buffer_size = 16M
+max_allowed_packet = 8M
+table_open_cache = 64
+sort_buffer_size = 512K
+net_buffer_length = 8K
+read_buffer_size = 256K
+read_rnd_buffer_size = 512K
+myisam_sort_buffer_size = 8M
+
+log-bin=mysql-bin
+binlog_format=mixed
+server-id = 1
+
+ignore-builtin-innodb
+plugin-load=innodb=ha_innodb_plugin.so;innodb_trx=ha_innodb_plugin.so;innodb_locks=ha_innodb_plugin.so;innodb_lock_waits=ha_innodb_plugin.so;innodb_cmp=ha_innodb_plugin.so;innodb_cmp_reset=ha_innodb_plugin.so;innodb_cmpmem=ha_innodb_plugin.so;innodb_cmpmem_reset=ha_innodb_plugin.so
+innodb_data_home_dir = /var/lib/mysql
+innodb_data_file_path = ibdata1:10M:autoextend
+innodb_log_group_home_dir = /var/lib/mysql
+innodb_buffer_pool_size = 16M
+innodb_additional_mem_pool_size = 2M
+innodb_log_file_size = 4M
+innodb_log_buffer_size = 8M
+innodb_flush_log_at_trx_commit = 1
+innodb_lock_wait_timeout = 50
+
+[mysqld_safe]
+log-error=/var/log/mysqld.log
+pid-file=/var/run/mysqld/mysqld.pid
+
+[mysqldump]
+quick
+max_allowed_packet = 16M
+
+[myisamchk]
+key_buffer_size = 20M
+sort_buffer_size = 20M
+read_buffer = 2M
+write_buffer = 2M
+
+[mysqlhotcopy]
+interactive-timeout
