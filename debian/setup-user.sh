@@ -4,12 +4,17 @@ set -e
 
 main()
 {
+  if [ ! -f $HOME/.shutils ]; then
+    wget -O .shutils http://kjsm.github.io/debian/shutils
+  fi
+  . $HOME/.shutils
+
   local readonly install_node_version="0.10.17"
   local readonly install_ruby_version="2.0.0-p247"
 
+  setup_packages
   setup_ssh_keys
   setup_dotfiles
-  setup_packages
   setup_mysql
   setup_nginx
   setup_nvm
@@ -18,49 +23,47 @@ main()
   setup_ruby $install_ruby_version
 }
 
+setup_packages()
+{
+  for package in \
+    curl git tig vim zsh tmux keychain zip unzip build-essential \
+    zlib1g-dev libssl-dev libreadline-dev libmysqlclient-dev libsqlite3-dev libxml2-dev libxslt1-dev
+  do
+    installed $package || install $package
+  done
+
+  if [ "$SETUP_PACKAGES_ONLY" ]; then
+    exit 0
+  fi
+}
+
 setup_ssh_keys()
 {
   local readonly ssh_dir="$HOME/.ssh"
   local readonly private_key_path="$ssh_dir/id_rsa"
   local readonly public_key_path="$ssh_dir/id_rsa.pub"
   local readonly authorized_keys_path="$ssh_dir/authorized_keys"
+  local host_os_public_key
 
-  if [ ! -d $ssh_dir ]; then
-    local input
+  # generate ssh key
+  if [ ! -f $private_key_path ]; then
+    ssh-keygen -t rsa -f $private_key_path -N "" -C "$USER@`uname -n`"
+    success "generate ssh key"
+  fi
 
-    # generate ssh key
-    if [ ! -f $private_key_path ]; then
-      ssh-keygen -t rsa -f $private_key_path -N "" -C "$USER@`uname -n`"
-      success "generate ssh key"
+  # create authorized_keys file
+  if [ ! -f $authorized_keys_path ]; then
+    cat $public_key_path > $authorized_keys_path
+    chmod 600 $authorized_keys_path
+    success "create authorized_keys file"
+
+    # add host os public key
+    input "Input host os public key"
+    read host_os_public_key
+    if [ -n "$host_os_public_key" ]; then
+      echo "$host_os_public_key" >> $authorized_keys_path
+      success "add host os public key"
     fi
-
-    # create authorized_keys file
-    if [ ! -f $authorized_keys_path ]; then
-
-      mkdir -p $ssh_dir
-      cat $public_key_path >> $authorized_keys_path
-      chmod 600 $authorized_keys_path
-      success "create authorized_keys file"
-
-      # add public key of host os
-      if ask "Add public key of host os to authorized_keys ?"; then
-        echo "Input public key of host os\n"
-        read input
-
-        if [ -n "$input" ]; then
-          echo "$input" >> $authorized_keys_path
-          success "add public key of host os"
-        fi
-      fi
-    fi
-
-    echo "Please register the public key to your repository hosting site"
-    echo
-    cat $public_key_path
-    echo
-
-    echo "(Press enter to continue)"
-    read input
   fi
 }
 
@@ -69,14 +72,20 @@ setup_dotfiles()
   local readonly dotfiles_dir="$HOME/.dotfiles"
 
   if [ ! -d $dotfiles_dir ]; then
-    if [ -z "$DOTFILES_REPOSITORY" ]; then
-      echo "not given DOTFILES_REPOSITORY"
+    notice "Please register the public key to your repository hosting site"
+    echo "\n$(cat $HOME/.ssh/id_rsa.pub)\n"
+    enter
+
+    input "Input the dotfiles repository location"
+    read dotfiles_repository
+    if [ -z "$dotfiles_repository" ]; then
+      error "Not given dotfiles repository location"
       exit 1
     fi
 
-    if ! git clone $DOTFILES_REPOSITORY $dotfiles_dir; then
-      error "failed clone repository"
-      exit 0
+    if ! git clone $dotfiles_repository $dotfiles_dir; then
+      error "Failed clone repository"
+      exit 1
     fi
 
     # git submodule init and update (vim plugins)
@@ -106,20 +115,9 @@ __END__
       success "change default shell to zsh"
     fi
 
-    echo "Please login again, and check keychain, zsh, tmux, and vim"
+    notice "Please login again, and check keychain, zsh, tmux, and vim"
     exit 0
   fi
-}
-
-setup_packages()
-{
-  for package in zlib1g-dev libssl-dev libreadline-dev libmysqlclient-dev libsqlite3-dev libxml2-dev libxslt1-dev;
-  do
-    if not_installed $package; then
-      sudo apt-get -qq install $package
-      success "install $package"
-    fi
-  done
 }
 
 setup_mysql()
@@ -128,7 +126,7 @@ setup_mysql()
     return 0
   fi
 
-  if not_installed mysql-server; then
+  if ! installed mysql-server; then
     sudo DEBIAN_FRONTEND=noninteractive apt-get -qq install mysql-server
     success "install mysql"
   fi
@@ -157,7 +155,7 @@ setup_nginx()
     return 0
   fi
 
-  if not_installed nginx; then
+  if ! installed nginx; then
     sudo apt-get -qq install nginx
     success "install nginx"
   fi
@@ -257,63 +255,14 @@ setup_ruby()
   fi
 }
 
-installed()
-{
-  local package="$1"
-
-  if [ -z "$package" ]; then
-    error "Not given package name"
-    exit 1
-  fi
-
-  if dpkg -s $package 2>&1 | grep '^Status: install' > /dev/null; then
-    return 0
-  else
-    return 1
-  fi
-}
-
-not_installed()
-{
-  if ! installed "$1"; then
-    return 0
-  else
-    return 1
-  fi
-}
-
-ask()
-{
-  local input
-
-  echo -n "\033[1;33m[ask] $1 (y/n)>\033[0m "
-  read input
-
-  if [ "$input" = "y" ]; then
-    return 0
-  else
-    return 1
-  fi
-}
-
-success()
-{
-  echo "\033[1;32m[success] $1\033[0m"
-}
-
-error()
-{
-  echo "\033[1;31m[error] $1\033[0m"
-}
-
 help()
 {
-  echo "Usage: `basename $0` [-r DOTFILES_REPOSITORY]"
+  echo "Usage: `basename $0` [-p]"
 }
 
-while getopts "r:" flag; do
+while getopts "p" flag; do
   case $flag in
-    r) DOTFILES_REPOSITORY="$OPTARG";;
+    p) SETUP_PACKAGES_ONLY=1;;
     *) help; exit 1;;
   esac
 done
