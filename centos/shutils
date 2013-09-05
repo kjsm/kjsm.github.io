@@ -1,0 +1,120 @@
+#/bin/sh
+
+install()
+{
+  local readonly package="$1"
+  local readonly options="$2"
+
+  if [ -z "$package" ]; then
+    error "Not given package name"
+    exit 1
+  fi
+
+  if [ $USER = "root" ]; then
+    yum -q -y $options install $package
+  else
+    sudo yum -q -y $options install $package
+  fi
+
+  success "install $package"
+}
+
+uninstall()
+{
+  local readonly package="$1"
+
+  if [ -z "$package" ]; then
+    error "Not given package name"
+    exit 1
+  fi
+
+  if [ $USER = "root" ]; then
+    yum remove $package
+  else
+    sudo yum remove $package
+  fi
+
+  success "uninstall $package"
+}
+
+installed()
+{
+  local package="$1"
+
+  if [ -z "$package" ]; then
+    error "Not given package name"
+    exit 1
+  fi
+
+  if yum info $package 2>&1 | grep '^Installed Packages' > /dev/null; then
+    return 0
+  else
+    return 1
+  fi
+}
+
+match()
+{
+  local readonly pattern="$1"
+  local readonly path="$2"
+
+  if [ -z "$pattern" ]; then
+    error "Not given pattern"
+    exit 1
+  fi
+
+  if [ -z "$path" ]; then
+    error "Not given path"
+    exit 1
+  fi
+
+  if grep "$pattern" $path > /dev/null; then
+    return 0
+  else
+    return 1
+  fi
+}
+
+ask()
+{
+  local _input
+
+  echo -n -e "\033[1;33m[ask] $1 (y/n)>\033[0m "
+  read _input
+
+  if [ "$_input" = "y" ]; then
+    return 0
+  else
+    return 1
+  fi
+}
+
+enter()
+{
+  local _input
+
+  echo -n -e "\033[1;33m(Press enter to continue)\033[0m"
+  read _input
+}
+
+input()
+{
+  echo -e "\033[1;33m[input] $1:\033[0m"
+}
+
+notice()
+{
+  echo -e "\033[1;36m[notice] $1\033[0m"
+}
+
+success()
+{
+  echo -e "\033[1;32m[success] $1\033[0m"
+}
+
+error()
+{
+  echo -e "\033[1;31m[error] $1\033[0m"
+}
+
+# vim: filetype=sh

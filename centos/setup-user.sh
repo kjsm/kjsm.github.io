@@ -4,6 +4,8 @@ set -e
 
 main()
 {
+  load_libraries
+
   local readonly install_ruby_version="2.0.0-p247"
 
   setup_packages
@@ -15,23 +17,32 @@ main()
   setup_ruby $install_ruby_version
 }
 
+load_libraries()
+{
+  if [ ! -f $HOME/.shutils ]; then
+    wget -O .shutils http://kjsm.github.io/centos/shutils
+  fi
+  . $HOME/.shutils
+}
+
 setup_packages()
 {
-  for package in keychain tig tmux;
+  for package in keychain tig tmux
   do
-    if not_installed $package; then
-      install $package "--enablerepo=rpmforge"
-    fi
+    installed $package || install $package "--enablerepo=rpmforge"
   done
 
-  for package in wget git zsh vim-enhanced zip unzip \
+  for package in \
+    wget git zsh vim-enhanced zip unzip \
     gcc gcc-c++ make autoconf automake patch \
-    zlib-devel openssl-devel readline-devel mysql-devel sqlite-devel;
+    zlib-devel openssl-devel readline-devel mysql-devel sqlite-devel
   do
-    if not_installed $package; then
-      install $package
-    fi
+    installed $package || install $package
   done
+
+  if [ "$SETUP_PACKAGES_ONLY" ]; then
+    exit 0
+  fi
 }
 
 setup_ssh_keys()
@@ -50,7 +61,6 @@ setup_ssh_keys()
 
   # create authorized_keys file
   if [ ! -f $authorized_keys_path ]; then
-    mkdir -p $ssh_dir
     cat $public_key_path >> $authorized_keys_path
     chmod 600 $authorized_keys_path
     success "create authorized_keys file"
@@ -58,7 +68,6 @@ setup_ssh_keys()
     # add host os public key
     input "Input host os public key"
     read host_os_public_key
-
     if [ -n "$host_os_public_key" ]; then
       echo "$host_os_public_key" >> $authorized_keys_path
       success "add host os public key"
@@ -73,16 +82,13 @@ setup_dotfiles()
 
   if [ ! -d $dotfiles_dir ]; then
     notice "Please register the public key to your repository hosting site"
-    echo
-    cat $HOME/.ssh/id_rsa.pub
-    echo
+    echo -e "\n$(cat $HOME/.ssh/id_rsa.pub)\n"
     enter
 
     input "Input the dotfiles repository location"
     read dotfiles_repository
-
     if [ -z "$dotfiles_repository" ]; then
-      echo "not given dotfiles repository location"
+      error "not given dotfiles repository location"
       exit 1
     fi
 
@@ -129,11 +135,11 @@ setup_mysql()
     return 0
   fi
 
-  if not_installed mysql-server; then
+  if ! installed mysql-server; then
     install mysql-server
 
     sudo cp /etc/my.cnf /etc/my.cnf.orig
-    sudo sh -c "curl http://kjsm.github.io/mysql-5.5.cnf > /etc/my.cnf"
+    sudo sh -c "curl http://kjsm.github.io/centos/mysql-5.5.cnf > /etc/my.cnf"
     sudo service mysqld start
     sudo chkconfig mysqld on
 
@@ -160,7 +166,7 @@ setup_nginx()
     return 0
   fi
 
-  if not_installed nginx; then
+  if ! installed nginx; then
     sudo rpm -iv http://nginx.org/packages/centos/6/noarch/RPMS/nginx-release-centos-6-0.el6.ngx.noarch.rpm
     sudo sed -i -e "s/enabled=1/enabled=0/g" /etc/yum.repos.d/nginx.repo
     sudo yum -y -q --enablerepo=nginx install nginx
@@ -223,86 +229,17 @@ setup_ruby()
   fi
 }
 
-install()
+help()
 {
-  local readonly package="$1"
-  local readonly options="$2"
-
-  if [ -z "$package" ]; then
-    error "Not given package name"
-    exit 1
-  fi
-
-  sudo yum -y $options install $package
-  success "install $package"
+  echo "Usage: `basename $0` [-p]"
 }
 
-installed()
-{
-  local readonly package="$1"
-
-  if [ -z "$package" ]; then
-    error "Not given package name"
-    exit 1
-  fi
-
-  if yum info $package 2>&1 | grep '^Installed Packages' > /dev/null; then
-    return 0
-  else
-    return 1
-  fi
-}
-
-not_installed()
-{
-  if ! installed "$1"; then
-    return 0
-  else
-    return 1
-  fi
-}
-
-ask()
-{
-  local input
-
-  echo -n -e "\033[1;33m[ask] $1 (y/n)>\033[0m "
-  read input
-
-  if [ "$input" = "y" ]; then
-    return 0
-  else
-    return 1
-  fi
-}
-
-input()
-{
-  echo -e "\033[1;33m[input] $1:\033[0m"
-}
-
-enter()
-{
-  local input
-
-  echo -e -n "\033[1;33m(Press enter to continue)\033[0m"
-  read input
-}
-
-notice()
-{
-  echo -e "\033[1;36m[notice] $1\033[0m"
-}
-
-success()
-{
-  echo -e "\033[1;32m[success] $1\033[0m"
-}
-
-error()
-{
-  echo -e "\033[1;31m[error] $1\033[0m"
-}
+while getopts "p" flag; do
+  case $flag in
+    p) SETUP_PACKAGES_ONLY=1;;
+    *) help; exit 1;;
+  esac
+done
 
 main
 

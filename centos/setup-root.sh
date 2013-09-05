@@ -4,6 +4,8 @@ set -e
 
 main()
 {
+  load_libraries
+
   if [ -z "$HOST_ADDRESS" ]; then
     echo "not given HOST_ADDRESS"
     exit 1
@@ -21,6 +23,14 @@ main()
   setup_virtualbox_guest_additions
 }
 
+load_libraries()
+{
+  if [ ! -f $HOME/.shutils ]; then
+    wget -O .shutils http://kjsm.github.io/centos/shutils
+  fi
+  . $HOME/.shutils
+}
+
 setup_user()
 {
   if [ ! -d /home/$USERNAME ]; then
@@ -28,7 +38,7 @@ setup_user()
     echo $USERNAME | passwd --stdin $USERNAME
     success "create user ($USERNAME)"
 
-    if not_match '^root: ' /etc/aliases; then
+    if ! match '^root: ' /etc/aliases; then
       echo "root: $USERNAME" >> /etc/aliases
       newaliases
       success "add aliases root to $USERNAME"
@@ -38,9 +48,13 @@ setup_user()
 
 setup_sudo()
 {
-  if not_match "$USERNAME" /etc/sudoers; then
+  if ! match "$USERNAME" /etc/sudoers; then
     chmod 600 /etc/sudoers
-    echo -e "\nroot ALL=(ALL) NOPASSWD: ALL\n$USERNAME ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+    cat >> /etc/sudoers <<__END__
+
+root ALL=(ALL) NOPASSWD: ALL
+$USERNAME ALL=(ALL) NOPASSWD: ALL
+__END__
     chmod 440 /etc/sudoers
     success "setup sudo"
   fi
@@ -55,7 +69,7 @@ setup_system()
   fi
 
   # setup hosts file
-  if not_match "$HOST_ADDRESS" /etc/hosts; then
+  if ! match "$HOST_ADDRESS" /etc/hosts; then
     cp /etc/hosts /etc/hosts.orig
     cat > /etc/hosts <<__END__
 $HOST_ADDRESS	`uname -n`
@@ -84,16 +98,13 @@ setup_virtualbox_guest_additions()
 {
   if ask "Install virtualbox guest additions ?"; then
     local readonly install_kernel_devel="kernel-devel-`uname -r`"
-    local input
 
-    echo -e "Please mount guest additions cd-rom (Devices > Install Guest Additions)\n\n(Press enter to continue)"
-    read input
+    notice "Please mount guest additions cd-rom (Devices > Install Guest Additions)"
+    enter
 
-    for package in $install_kernel_devel gcc make patch;
+    for package in $install_kernel_devel gcc make patch
     do
-      if not_installed $package; then
-        install $package
-      fi
+      installed $package || install $package
     done
 
     mkdir -p /mnt/cdrom
@@ -123,98 +134,6 @@ __END__
 
     success "setup virtualbox guest additions"
   fi
-}
-
-match()
-{
-  local readonly expression="$1"
-  local readonly path="$2"
-
-  if [ -z "$expression" ]; then
-    error "Not given expression"
-    exit 1
-  fi
-  if [ -z "$path" ]; then
-    error "Not given path"
-    exit 1
-  fi
-
-  if cat $path | grep "$expression" > /dev/null; then
-    return 0
-  else
-    return 1
-  fi
-}
-
-not_match()
-{
-  if ! match "$1" "$2"; then
-    return 0
-  else
-    return 1
-  fi
-}
-
-install()
-{
-  local readonly package="$1"
-
-  if [ -z "$package" ]; then
-    error "Not given package name"
-    exit 1
-  fi
-
-  yum -q -y install $package
-  success "install $package"
-}
-
-installed()
-{
-  local package="$1"
-
-  if [ -z "$package" ]; then
-    error "Not given package name"
-    exit 1
-  fi
-
-  if yum info $package 2>&1 | grep '^Installed Packages' > /dev/null; then
-    return 0
-  else
-    return 1
-  fi
-}
-
-not_installed()
-{
-  if ! installed "$1"; then
-    return 0
-  else
-    return 1
-  fi
-}
-
-ask()
-{
-  local input
-
-  echo -n -e "\033[1;33m[ask] $1 (y/n)>\033[0m "
-  read input
-
-  if [ "$input" = "y" ]; then
-    return 0
-  else
-    return 1
-  fi
-}
-
-success()
-{
-  echo -e "\033[1;32m[success] $1\033[0m"
-}
-
-error()
-{
-  echo -e "\033[1;31m[error] $1\033[0m"
 }
 
 help()
