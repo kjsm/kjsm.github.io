@@ -9,8 +9,8 @@ main()
   fi
   . $HOME/.shutils
 
-  local readonly install_node_version="0.10.17"
-  local readonly install_ruby_version="2.0.0-p247"
+  local readonly install_node_version="0.10.24"
+  local readonly install_ruby_version="2.0.0-p353"
 
   setup_packages
   setup_ssh_keys
@@ -222,10 +222,10 @@ setup_rbenv()
     success "install ruby-build"
   fi
 
-  if [ ! -d $rbenv_plugins_dir/rbenv-gemset ]; then
-    git clone git://github.com/jamis/rbenv-gemset.git $rbenv_plugins_dir/rbenv-gemset
-    success "install rbenv-gemset"
-  fi
+  #if [ ! -d $rbenv_plugins_dir/rbenv-gemset ]; then
+  #  git clone git://github.com/jamis/rbenv-gemset.git $rbenv_plugins_dir/rbenv-gemset
+  #  success "install rbenv-gemset"
+  #fi
 }
 
 setup_ruby()
