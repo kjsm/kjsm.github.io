@@ -23,9 +23,9 @@ repo --name="CentOS" --baseurl=file:///mnt/source --cost=100
 services --disabled auditd,blk-availability,ip6tables,iptables,iscsi,iscsid,lvm2-monitor,mdmonitor,netfs
 poweroff
 
-%packages --nobase
+%packages
 @core
--selinux-policy-targeted
+@base
 %end
 
 %pre
@@ -38,13 +38,12 @@ for x in `cat /proc/cmdline`; do
   esac;
 done
 
-[ -z "$HOSTNAME" ] && HOSTNAME="localhost.localdomain"
-[ -z "$IP_ADDRESS" ] && IP_ADDRESS="192.168.56.50"
-
-cat > /tmp/network.ks <<__END__
+if [ -n "$HOSTNAME" ] && [ -n "$IP_ADDRESS" ]; then
+  cat > /tmp/network.ks <<__END__
 network --onboot yes --device eth0 --bootproto dhcp --noipv6 --hostname $HOSTNAME
-network --onboot yes --device eth1 --bootproto static --ip $IP_ADDRESS --netmask 255.255.255.0 --gateway 192.168.56.1 --noipv6 --hostname $HOSTNAME
+network --onboot yes --device eth1 --bootproto static --ip $IP_ADDRESS --netmask 255.255.255.0 --noipv6 --hostname $HOSTNAME
 __END__
+fi
 
 %end
 
