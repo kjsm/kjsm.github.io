@@ -4,7 +4,10 @@ set -e
 
 main()
 {
-  load_libraries
+  if [ ! -f $HOME/.shutils ]; then
+    curl -O http://kjsm.github.io/centos/shutils -o .shutils
+  fi
+  . $HOME/.shutils
 
   if [ -z "$HOST_ADDRESS" ]; then
     echo "not given HOST_ADDRESS"
@@ -21,14 +24,6 @@ main()
   setup_system
   setup_repositories
   setup_virtualbox_guest_additions
-}
-
-load_libraries()
-{
-  if [ ! -f $HOME/.shutils ]; then
-    wget -O .shutils http://kjsm.github.io/centos/shutils
-  fi
-  . $HOME/.shutils
 }
 
 setup_user()
