@@ -46,7 +46,7 @@ installed()
     exit 1
   fi
 
-  if yum info $package 2>&1 | grep '^Installed Packages' > /dev/null; then
+  if rpm -q $package > /dev/null; then
     return 0
   else
     return 1
