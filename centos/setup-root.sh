@@ -107,26 +107,6 @@ setup_virtualbox_guest_additions()
     sh /mnt/cdrom/VBoxLinuxAdditions.run
     umount /mnt/cdrom
 
-    # patch for virtualbox 4.2.4 (https://www.virtualbox.org/ticket/11586)
-    if [ -f /opt/VBoxGuestAdditions-4.2.4/src/vboxguest-4.2.4/vboxvideo/vboxvideo_drm.c ]; then
-      patch -d /opt/VBoxGuestAdditions-4.2.4/src/vboxguest-4.2.4/vboxvideo -u <<__END__
---- vboxvideo_drm.c.orig  2013-09-02 12:52:10.102252738 +0900
-+++ vboxvideo_drm.c 2013-09-02 12:53:02.877636281 +0900
-@@ -107,7 +107,7 @@
-     /* .driver_features = DRIVER_USE_MTRR, */
-     .load = vboxvideo_driver_load,
- #if LINUX_VERSION_CODE < KERNEL_VERSION(3, 6, 0)
--    .reclaim_buffers = drm_core_reclaim_buffers,
-+    //.reclaim_buffers = drm_core_reclaim_buffers,
- #endif
-     /* As of Linux 2.6.37, always the internal functions are used. */
- #if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 37) && !defined(DRM_RHEL61)
-__END__
-      success "patch vboxvideo_drm.c"
-
-      /etc/init.d/vboxadd setup
-    fi
-
     success "setup virtualbox guest additions"
   fi
 }
