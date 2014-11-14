@@ -97,7 +97,7 @@ setup_virtualbox_guest_additions()
     notice "Please mount guest additions cd-rom (Devices > Install Guest Additions)"
     enter
 
-    for package in $install_kernel_devel gcc make patch
+    for package in $install_kernel_devel gcc make patch perl
     do
       installed $package || install $package
     done
