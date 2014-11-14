@@ -2,11 +2,14 @@
 
 set -e
 
+readonly INSTALL_RUBY_VERSION="2.1.4"
+
 main()
 {
-  load_libraries
-
-  local readonly install_ruby_version="2.0.0-p247"
+  if [ ! -f $HOME/.shutils ]; then
+    wget -O .shutils http://kjsm.github.io/centos/shutils
+  fi
+  . $HOME/.shutils
 
   setup_packages
   setup_ssh_keys
@@ -14,15 +17,7 @@ main()
   setup_mysql
   setup_nginx
   setup_rbenv
-  setup_ruby $install_ruby_version
-}
-
-load_libraries()
-{
-  if [ ! -f $HOME/.shutils ]; then
-    wget -O .shutils http://kjsm.github.io/centos/shutils
-  fi
-  . $HOME/.shutils
+  setup_ruby $INSTALL_RUBY_VERSION
 }
 
 setup_packages()
