@@ -190,11 +190,6 @@ setup_rbenv()
     git clone git://github.com/sstephenson/ruby-build.git $rbenv_plugins_dir/ruby-build
     success "install ruby-build"
   fi
-
-  if [ ! -d $rbenv_plugins_dir/rbenv-gemset ]; then
-    git clone git://github.com/jamis/rbenv-gemset.git $rbenv_plugins_dir/rbenv-gemset
-    success "install rbenv-gemset"
-  fi
 }
 
 setup_ruby()
