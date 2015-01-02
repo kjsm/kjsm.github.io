@@ -7,7 +7,7 @@ readonly INSTALL_RUBY_VERSION="2.1.4"
 main()
 {
   if [ ! -f $HOME/.shutils ]; then
-    wget -O .shutils http://kjsm.github.io/centos/shutils
+    curl -o $HOME/.shutils -O http://kjsm.github.io/centos/shutils
   fi
   . $HOME/.shutils
 
