@@ -2,6 +2,12 @@
 
 set -e
 
+# epel repository
+readonly EPEL_RPM_URL="http://dl.fedoraproject.org/pub/epel/6/x86_64/epel-release-6-8.noarch.rpm"
+
+# rpmforge repository
+readonly RPMFORGE_RPM_URL="http://pkgs.repoforge.org/rpmforge-release/rpmforge-release-0.5.3-1.el6.rf.x86_64.rpm"
+
 main()
 {
   if [ ! -f $HOME/.shutils ]; then
@@ -76,16 +82,16 @@ __END__
 
 setup_repositories()
 {
-  if [ ! -f /etc/yum.repos.d/rpmforge.repo ]; then
-    curl -sL http://pkgs.repoforge.org/rpmforge-release/rpmforge-release-0.5.3-1.el6.rf.i686.rpm -o rpmforge.rpm && rpm -Uv rpmforge.rpm && rm rpmforge.rpm
-    sed -i -e "s/enabled = 1/enabled = 0/g" /etc/yum.repos.d/rpmforge.repo
-    success "setup rpmforge repository"
-  fi
-
   if [ ! -f /etc/yum.repos.d/epel.repo ]; then
-    curl -sL http://dl.fedoraproject.org/pub/epel/6/i386/epel-release-6-8.noarch.rpm -o epel.rpm && rpm -Uv epel.rpm && rm epel.rpm
+    curl -sL $EPEL_RPM_URL -o epel.rpm && rpm -Uv epel.rpm && rm epel.rpm
     sed -i -e "s/enabled=1/enabled=0/g" /etc/yum.repos.d/epel.repo
     success "setup epel repository"
+  fi
+
+  if [ ! -f /etc/yum.repos.d/rpmforge.repo ]; then
+    curl -sL $RPMFORGE_RPM_URL -o rpmforge.rpm && rpm -Uv rpmforge.rpm && rm rpmforge.rpm
+    sed -i -e "s/enabled = 1/enabled = 0/g" /etc/yum.repos.d/rpmforge.repo
+    success "setup rpmforge repository"
   fi
 }
 
