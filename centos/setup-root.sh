@@ -11,7 +11,7 @@ readonly RPMFORGE_RPM_URL="http://pkgs.repoforge.org/rpmforge-release/rpmforge-r
 main()
 {
   if [ ! -f $HOME/.shutils ]; then
-    curl -O http://kjsm.github.io/centos/shutils -o .shutils
+    curl -o $HOME/.shutils -O http://kjsm.github.io/centos/shutils
   fi
   . $HOME/.shutils
 
