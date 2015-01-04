@@ -149,7 +149,7 @@ setup_mysql()
     #mysqladmin -u root password $new_password
     mysql -u root -e "DELETE FROM mysql.user WHERE User='';"
     mysql -u root -e "DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');"
-    mysql -u root -e "DROP DATABASE test IF EXISTS test;"
+    mysql -u root -e "DROP DATABASE IF EXISTS test;"
     mysql -u root -e "DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%';"
     mysql -u root -e "FLUSH PRIVILEGES;"
 
