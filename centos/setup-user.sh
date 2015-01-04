@@ -2,6 +2,10 @@
 
 set -e
 
+# MySQL repository rpm
+readonly INSTALL_MYSQL_REPOSITORY_URL="http://dev.mysql.com/get/mysql-community-release-el6-5.noarch.rpm"
+
+# Ruby version
 readonly INSTALL_RUBY_VERSION="2.1.4"
 
 main()
@@ -30,7 +34,7 @@ setup_packages()
   for package in \
     wget git zsh vim-enhanced zip unzip \
     gcc gcc-c++ make autoconf automake patch \
-    zlib-devel openssl-devel readline-devel mysql-devel sqlite-devel
+    zlib-devel openssl-devel readline-devel sqlite-devel
   do
     installed $package || install $package
   done
@@ -126,15 +130,16 @@ __END__
 
 setup_mysql()
 {
-  if installed mysql-server || ! ask "Install mysql ?"; then
+  if installed mysql-server || installed mysql-community-server || ! ask "Install mysql ?"; then
     return 0
   fi
 
-  if ! installed mysql-server; then
-    install mysql-server
+  if ! installed mysql-server && ! installed mysql-community-server; then
+    install $INSTALL_MYSQL_REPOSITORY_URL
+    install mysql-community-libs-compat mysql-community-devel mysql-community-server
 
     sudo cp /etc/my.cnf /etc/my.cnf.orig
-    sudo sh -c "curl http://kjsm.github.io/centos/mysql-5.5.cnf > /etc/my.cnf"
+    sudo sh -c "curl http://kjsm.github.io/centos/mysql-5.6.cnf > /etc/my.cnf"
     sudo service mysqld start
     sudo chkconfig mysqld on
 
