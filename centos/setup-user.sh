@@ -136,7 +136,9 @@ setup_mysql()
 
   if ! installed mysql-server && ! installed mysql-community-server; then
     install $INSTALL_MYSQL_REPOSITORY_URL
-    install mysql-community-libs-compat mysql-community-devel mysql-community-server
+    install mysql-community-libs-compat
+    install mysql-community-devel
+    install mysql-community-server
 
     sudo cp /etc/my.cnf /etc/my.cnf.orig
     sudo sh -c "curl http://kjsm.github.io/centos/mysql-5.6.cnf > /etc/my.cnf"
@@ -147,7 +149,7 @@ setup_mysql()
     #mysqladmin -u root password $new_password
     mysql -u root -e "DELETE FROM mysql.user WHERE User='';"
     mysql -u root -e "DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');"
-    mysql -u root -e "DROP DATABASE test;"
+    mysql -u root -e "DROP DATABASE test IF EXISTS test;"
     mysql -u root -e "DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%';"
     mysql -u root -e "FLUSH PRIVILEGES;"
 
