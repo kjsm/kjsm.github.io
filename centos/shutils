@@ -53,6 +53,37 @@ installed()
   fi
 }
 
+brew_install()
+{
+  local readonly package="$1"
+  local readonly options="$2"
+
+  if [ -z "$package" ]; then
+    error "Not given package name"
+    exit 1
+  fi
+
+  brew install $package $options
+
+  success "install $package (by brew)"
+}
+
+brew_installed()
+{
+  local package="$1"
+
+  if [ -z "$package" ]; then
+    error "Not given package name"
+    exit 1
+  fi
+
+  if brew list | grep $package > /dev/null; then
+    return 0
+  else
+    return 1
+  fi
+}
+
 match()
 {
   local readonly pattern="$1"
