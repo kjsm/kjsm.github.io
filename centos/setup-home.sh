@@ -24,10 +24,9 @@ install_packages()
     installed $package || install $package
   done
 
-  for package in tig
-  do
-    installed $package || install $package "--enablerepo=rpmforge"
-  done
+  # Install Git 1.7.12 by rpmforge-extras (centos base repository git version is 1.7.1)
+  installed git || install git --enablerepo=rpmforge-extras
+  installed tig || install tig --enablerepo=rpmforge
 }
 
 install_brew()
@@ -49,9 +48,8 @@ install_brew()
     brew update
     success "brew update"
 
-    brew_installed git || brew_install git
     brew_installed pkg-config || brew_install pkg-config
-    brew installed ncurses || brew_install homebrew/dupes/ncurses
+    brew_installed ncurses || brew_install homebrew/dupes/ncurses
 
     if brew doctor | grep "Your system is ready to brew" > /dev/null; then
       success "Ready to brew"
@@ -69,7 +67,7 @@ install_brew_packages()
   brew_installed perl || brew_install perl
   brew_installed vim || brew_install vim --override-system-vi
   brew_installed tmux || brew_install tmux
-  brew installed zsh || brew_install zsh
+  brew_installed zsh || brew_install zsh
 }
 
 setup_ssh_keys()
@@ -135,6 +133,12 @@ setup_dotfiles()
     # create symlinks for dotfiles
     $dotfiles_dir/script/dotfiles_linker.sh link
     success "create symlinks for dotfiles"
+
+    # create mysql config file for user
+    if [ ! -f $HOME/.my.cnf ]; then
+      echo -e "[client]\nuser=root" > $HOME/.my.cnf && chmod 600 $HOME/.my.cnf
+      success "setup ~/.my.cnf"
+    fi
 
     # create .gitconfig.local
     if [ ! -f $HOME/.gitconfig.local ]; then
