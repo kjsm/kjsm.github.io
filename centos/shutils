@@ -10,13 +10,19 @@ install()
     exit 1
   fi
 
-  if [ $USER = "root" ]; then
-    yum -q -y $options install $package
-  else
-    sudo yum -q -y $options install $package
-  fi
+  if ! installed $package; then
+    notice "Install: $package"
 
-  success "install $package"
+    if [ $USER = "root" ]; then
+      yum install -q -y $options $package
+    else
+      sudo yum install -q -y $options $package
+    fi
+
+    success "Installed: $package"
+  else
+    skip "Already installed: $package"
+  fi
 }
 
 uninstall()
@@ -28,18 +34,24 @@ uninstall()
     exit 1
   fi
 
-  if [ $USER = "root" ]; then
-    yum remove $package
-  else
-    sudo yum remove $package
-  fi
+  if installed $package; then
+    notice "Uninstall: $package"
 
-  success "uninstall $package"
+    if [ $USER = "root" ]; then
+      yum remove $package
+    else
+      sudo yum remove $package
+    fi
+
+    success "Uninstalled: $package"
+  else
+    skip "Not installed: $package"
+  fi
 }
 
 installed()
 {
-  local package="$1"
+  local readonly package="$1"
 
   if [ -z "$package" ]; then
     error "Not given package name"
@@ -106,6 +118,11 @@ match()
   fi
 }
 
+current_dir()
+{
+  echo $(cd $(dirname $0); pwd)
+}
+
 ask()
 {
   local _input
@@ -135,17 +152,22 @@ input()
 
 notice()
 {
-  echo -e "\033[1;36m[notice] $1\033[0m"
+  echo -e "\033[1;35m==>\033[0m $1"
 }
 
 success()
 {
-  echo -e "\033[1;32m[success] $1\033[0m"
+  echo -e "\033[1;32m==>\033[0m $1"
+}
+
+skip()
+{
+  echo -e "\033[1;33m==> (skip) $1\033[0m"
 }
 
 error()
 {
-  echo -e "\033[1;31m[error] $1\033[0m"
+  echo -e "\033[1;31m==> (error) $1\033[0m"
 }
 
 # vim: filetype=sh

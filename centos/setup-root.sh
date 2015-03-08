@@ -16,116 +16,215 @@ main()
   . $HOME/.shutils
 
   if [ -z "$HOST_ADDRESS" ]; then
-    echo "not given HOST_ADDRESS"
+    error "not given HOST_ADDRESS (-a)"
     exit 1
   fi
 
   if [ -z "$USERNAME" ]; then
-    echo "not given USERNAME"
+    error "not given USERNAME (-u)"
     exit 1
   fi
 
-  setup_user
-  setup_sudo
-  setup_system
-  setup_repositories
-  setup_virtualbox_guest_additions
+  disable_firewall
+  disable_selinux
+  add_user_of_administrator
+  add_root_alias
+  create_wheel_group_sudoers
+  add_users_to_wheel_group
+  add_hostname_to_hosts
+  add_repositories
+
+  install_virtualbox_guest_additions
 }
 
-setup_user()
+disable_firewall()
+{
+  for service_name in iptables ip6tables
+  do
+    if service $service_name status > /dev/null; then
+      notice "Stop service: $service_name"
+
+      service $service_name stop > /dev/null
+
+      success "Stopped service: $service_name"
+    else
+      skip "Already stopped service: $service_name"
+    fi
+
+    if chkconfig --list $service_name | grep ':on' > /dev/null; then
+      notice "Disable service: $service_name"
+
+      chkconfig $service_name off
+
+      success "Disabled service: $service_name"
+    else
+      skip "Already disabled service: $service_name"
+    fi
+  done
+}
+
+disable_selinux()
+{
+  if [ "$(getenforce)" = "Enforcing" ]; then
+    notice "Stop: selinux"
+
+    setenforce 0
+
+    success "Stopped: selinux"
+  else
+    skip "Already stopped: selinux"
+  fi
+
+  if match '^SELINUX=enforcing$' /etc/selinux/config; then
+    notice "Disable: selinux"
+
+    sed -i -e "s/^SELINUX=enforcing$/SELINUX=disabled/g" /etc/selinux/config
+
+    success "Disabled: selinux"
+  else
+    skip "Already disabled: selinux"
+  fi
+}
+
+add_user_of_administrator()
 {
   if [ ! -d /home/$USERNAME ]; then
+    notice "Add user: $USERNAME"
+
     useradd $USERNAME
     echo $USERNAME | passwd --stdin $USERNAME
-    success "create user ($USERNAME)"
 
-    if ! match '^root: ' /etc/aliases; then
-      echo "root: $USERNAME" >> /etc/aliases
-      newaliases
-      success "add aliases root to $USERNAME"
+    success "Added user: $USERNAME"
+  else
+    skip "Already exists: $USERNAME"
+  fi
+}
+
+add_root_alias()
+{
+  if ! match "^root:.\+$USERNAME" /etc/aliases; then
+    notice "Add alias: root > $USERNAME"
+
+    echo "root: $USERNAME" >> /etc/aliases
+    newaliases
+
+    success "Added alias: root > $USERNAME"
+  else
+    skip "Already alias: root > $USERNAME"
+  fi
+}
+
+create_wheel_group_sudoers()
+{
+  local readonly sudoers_dir="/etc/sudoers.d/"
+  local readonly sudoers_wheel_file="$sudoers_dir/10_wheel_group"
+
+  if [ ! -f $sudoers_wheel_file ]; then
+    notice "Create file: $sudoers_wheel_file"
+
+    mkdir -p $sudoers_dir
+    chmod 750 $sudoers_dir
+    cat >> $sudoers_wheel_file <<__END__
+%wheel ALL=(ALL) NOPASSWD: ALL
+__END__
+    chmod 440 $sudoers_wheel_file
+
+    success "Created file: $sudoers_wheel_file"
+  else
+    skip "Already exists: $sudoers_wheel_file"
+  fi
+}
+
+add_users_to_wheel_group()
+{
+  for user in root $USERNAME
+  do
+    if ! match "^wheel:.\+$user" /etc/group; then
+      notice "Add to wheel group: $user"
+
+      gpasswd -a $user wheel
+
+      success "Added to wheel group: $user"
+    else
+      skip "Already added to wheel group: $user"
     fi
-  fi
+  done
 }
 
-setup_sudo()
+add_hostname_to_hosts()
 {
-  if ! match "$USERNAME" /etc/sudoers; then
-    chmod 600 /etc/sudoers
-    cat >> /etc/sudoers <<__END__
-
-root ALL=(ALL) NOPASSWD: ALL
-$USERNAME ALL=(ALL) NOPASSWD: ALL
-__END__
-    chmod 440 /etc/sudoers
-    success "setup sudo"
-  fi
-}
-
-setup_system()
-{
-  # disable unnecessary consoles
-  if match '^ACTIVE_CONSOLES=/dev/tty\[1-6\]' /etc/sysconfig/init; then
-    sed -i.orig -e 's/^\(ACTIVE_CONSOLES\)=.\+/\1=\/dev\/tty1/' /etc/sysconfig/init
-    success "disable unnecessary consoles"
-  fi
-
-  # setup hosts file
   if ! match "$HOST_ADDRESS" /etc/hosts; then
-    cp /etc/hosts /etc/hosts.orig
-    cat > /etc/hosts <<__END__
+    notice "Add hosts: $(uname -n) ($HOST_ADDRESS)"
+
+    cat >> /etc/hosts <<__END__
 $HOST_ADDRESS	`uname -n`
-127.0.0.1	localhost
 __END__
-    success "setup hosts file"
+
+    success "Added hosts: $(uname -n) ($HOST_ADDRESS)"
+  else
+    skip "Already added: $(uname -n) ($HOST_ADDRESS)"
   fi
 }
 
-setup_repositories()
+add_repositories()
 {
   if [ ! -f /etc/yum.repos.d/epel.repo ]; then
-    curl -sL $EPEL_RPM_URL -o epel.rpm && rpm -Uv epel.rpm && rm epel.rpm
-    sed -i -e "s/enabled=1/enabled=0/g" /etc/yum.repos.d/epel.repo
-    success "setup epel repository"
+    notice "Add repository: epel"
+
+    yum install -y -q $EPEL_RPM_URL
+    sed -i -e "s/enabled\(\s*\)=\(\s*\)1/enabled\1=\20/g" /etc/yum.repos.d/epel.repo
+
+    success "Added repository: epel"
+  else
+    skip "Already added repository: epel"
   fi
 
   if [ ! -f /etc/yum.repos.d/rpmforge.repo ]; then
-    curl -sL $RPMFORGE_RPM_URL -o rpmforge.rpm && rpm -Uv rpmforge.rpm && rm rpmforge.rpm
-    sed -i -e "s/enabled = 1/enabled = 0/g" /etc/yum.repos.d/rpmforge.repo
-    success "setup rpmforge repository"
+    notice "Add repository: rpmforge"
+
+    yum install -y -q $RPMFORGE_RPM_URL
+    sed -i -e "s/enabled\(\s*\)=\(\s*\)1/enabled\1=\20/g" /etc/yum.repos.d/rpmforge.repo
+
+    success "Added repository: rpmforge"
+  else
+    skip "Already added repository: rpmforge"
   fi
 }
 
-setup_virtualbox_guest_additions()
+install_virtualbox_guest_additions()
 {
-  if ask "Install virtualbox guest additions ?"; then
-    local readonly install_kernel_devel="kernel-devel-`uname -r`"
+  if [ "$INSTALL_VIRTUALBOX_GUEST_ADDITIONS" = "1" ]; then
+    if [ ! -f /usr/sbin/VBoxService ]; then
+      local readonly kernel_devel="kernel-devel-`uname -r`"
 
-    notice "Please mount guest additions cd-rom (Devices > Install Guest Additions)"
-    enter
+      notice "Install: Virtualbox guest additions"
+      notice "Please mount guest additions cd-rom (Devices > Install Guest Additions)"
+      enter
 
-    for package in $install_kernel_devel gcc make patch perl
-    do
-      installed $package || install $package
-    done
+      for package in $kernel_devel gcc make patch perl; do install $package; done
 
-    mkdir -p /mnt/cdrom
-    mount -r /dev/cdrom /mnt/cdrom
-    sh /mnt/cdrom/VBoxLinuxAdditions.run
-    umount /mnt/cdrom
+      mkdir -p /mnt/cdrom
+      mount -r /dev/cdrom /mnt/cdrom
+      sh /mnt/cdrom/VBoxLinuxAdditions.run
+      umount /mnt/cdrom
 
-    success "setup virtualbox guest additions"
+      success "Installed: Virtualbox guest additions"
+    else
+      skip "Already installed: Virtualbox guest additions"
+    fi
   fi
 }
 
 help()
 {
-  echo "Usage: `basename $0` [-u USERNAME] [-a HOST_ADDRESS]"
+  echo "Usage: `basename $0` [-a HOST_ADDRESS] [-u USERNAME]"
 }
 
-while getopts "u:a:" flag; do
+while getopts "u:a:v" flag; do
   case $flag in
-    u) USERNAME="$OPTARG";;
     a) HOST_ADDRESS="$OPTARG";;
+    u) USERNAME="$OPTARG";;
+    v) INSTALL_VIRTUALBOX_GUEST_ADDITIONS="1";;
     *) help; exit 1;;
   esac
 done
