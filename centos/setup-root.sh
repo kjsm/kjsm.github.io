@@ -25,6 +25,8 @@ main()
     exit 1
   fi
 
+  install_virtualbox_guest_additions
+
   disable_firewall
   disable_selinux
   add_user_of_administrator
@@ -33,8 +35,31 @@ main()
   add_users_to_wheel_group
   add_hostname_to_hosts
   add_repositories
+  add_essential_packages
+}
 
-  install_virtualbox_guest_additions
+install_virtualbox_guest_additions()
+{
+  if [ "$INSTALL_VIRTUALBOX_GUEST_ADDITIONS" = "1" ]; then
+    if [ ! -f /usr/sbin/VBoxService ]; then
+      local readonly kernel_devel="kernel-devel-`uname -r`"
+
+      notice "Install: Virtualbox guest additions"
+      notice "Please mount guest additions cd-rom (Devices > Install Guest Additions)"
+      enter
+
+      for package in $kernel_devel gcc make patch perl; do install $package; done
+
+      mkdir -p /mnt/cdrom
+      mount -r /dev/cdrom /mnt/cdrom
+      sh /mnt/cdrom/VBoxLinuxAdditions.run
+      umount /mnt/cdrom
+
+      success "Installed: Virtualbox guest additions"
+    else
+      skip "Already installed: Virtualbox guest additions"
+    fi
+  fi
 }
 
 disable_firewall()
@@ -116,7 +141,7 @@ add_root_alias()
 
 create_wheel_group_sudoers()
 {
-  local readonly sudoers_dir="/etc/sudoers.d/"
+  local readonly sudoers_dir="/etc/sudoers.d"
   local readonly sudoers_wheel_file="$sudoers_dir/10_wheel_group"
 
   if [ ! -f $sudoers_wheel_file ]; then
@@ -191,28 +216,26 @@ add_repositories()
   fi
 }
 
-install_virtualbox_guest_additions()
+add_essential_packages()
 {
-  if [ "$INSTALL_VIRTUALBOX_GUEST_ADDITIONS" = "1" ]; then
-    if [ ! -f /usr/sbin/VBoxService ]; then
-      local readonly kernel_devel="kernel-devel-`uname -r`"
+  # Install git 1.7.12 (with subversion 1.7.4) from rpmforge-extras
+  # CentOS base repository git version is 1.7.1 (gitlab requires git 1.7.10 newer)
+  install git --enablerepo=rpmforge-extras
 
-      notice "Install: Virtualbox guest additions"
-      notice "Please mount guest additions cd-rom (Devices > Install Guest Additions)"
-      enter
+  # Install from rpmforge
+  for package in tmux tig keychain
+  do
+    install $package --enablerepo=rpmforge
+  done
 
-      for package in $kernel_devel gcc make patch perl; do install $package; done
-
-      mkdir -p /mnt/cdrom
-      mount -r /dev/cdrom /mnt/cdrom
-      sh /mnt/cdrom/VBoxLinuxAdditions.run
-      umount /mnt/cdrom
-
-      success "Installed: Virtualbox guest additions"
-    else
-      skip "Already installed: Virtualbox guest additions"
-    fi
-  fi
+  # Install from CentOS base repository
+  for package in \
+    wget zsh vim-enhanced zip unzip \
+    gcc gcc-c++ make autoconf automake patch \
+    zlib-devel openssl-devel readline-devel sqlite-devel
+  do
+    install $package
+  done
 }
 
 help()
