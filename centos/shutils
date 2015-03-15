@@ -65,6 +65,72 @@ installed()
   fi
 }
 
+install_repository()
+{
+  local readonly name="$1"
+  local readonly url="$2"
+  local readonly local_path="$3"
+
+  if [ -z "$name" ]; then
+    error "Not given repository name"
+    exit 1
+  fi
+
+  if [ -z "$url" ]; then
+    error "Not given url"
+    exit 1
+  fi
+
+  if [ -z "$local_path" ]; then
+    error "Not given url"
+    exit 1
+  fi
+
+  if [ ! -f $local_path ]; then
+    notice "Install repository: $name"
+    sudo yum install -q -y $url
+    success "Installed repository: $name"
+  else
+    skip "Already installed: $name"
+  fi
+}
+
+start_service()
+{
+  local readonly service="$1"
+
+  if [ -z "$service" ]; then
+    error "Not given service name"
+    exit 1
+  fi
+
+  if sudo service $service status > /dev/null; then
+    skip "Already started: $service"
+  else
+    notice "Start service: $service"
+    sudo service $service start > /dev/null 2>&1
+    success "Started service: $service"
+  fi
+}
+
+enable_service()
+{
+  local readonly service="$1"
+
+  if [ -z "$service" ]; then
+    error "Not given service name"
+    exit 1
+  fi
+
+  if sudo chkconfig --list $service | grep ":on" > /dev/null; then
+    skip "Already enabled: $service"
+  else
+    notice "Enable service: $service"
+    sudo chkconfig $service on
+    success "Enabled service: $service"
+  fi
+}
+
 brew_install()
 {
   local readonly package="$1"
