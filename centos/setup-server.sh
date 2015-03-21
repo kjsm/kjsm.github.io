@@ -57,7 +57,7 @@ __END__"
     sudo sh -c "curl http://kjsm.github.io/centos/mysql-5.6.cnf > $mysql_user_config_path"
     success "Created file: $mysql_user_config_path"
   else
-    skip "Already Created: $mysql_user_config_path"
+    skip "Already exists: $mysql_user_config_path"
   fi
 }
 
@@ -112,7 +112,7 @@ install_ruby()
     skip "Already installed: ruby $ruby_version"
   fi
 
-  success "ruby ok"
+  success "ruby ok\n"
 }
 
 install_rbenv()
