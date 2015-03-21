@@ -14,6 +14,7 @@ main()
   install_mysql
   install_nginx
   install_ruby $INSTALL_RUBY_VERSION
+  install_gitlab
 }
 
 # -------------------------------------------------------------------------------------------------
@@ -207,6 +208,161 @@ __END__"
     skip "Already exists: $default_gems_file"
   fi
 }
+
+# -------------------------------------------------------------------------------------------------
+# gitlab
+# -------------------------------------------------------------------------------------------------
+install_gitlab()
+{
+  local readonly git_home="/home/git"
+  local readonly gitlab_dir="/home/git/gitlab"
+  local readonly gitlab_database="gitlabhq_production"
+
+  if [ -z "$SERVER_FQDN" ]; then
+    skip "Not give server fqdn, skip gitlab installing"
+    success "gitlab skipped"
+    return 0
+  fi
+
+  for package in cmake libicu-devel libxml2-devel libxslt-devel
+  do
+    install $package
+  done
+
+  install redis --enablerepo=epel
+
+  if ! match '^unixsocket ' /etc/redis.conf; then
+    notice "Edit file: /etc/redis.conf"
+    sudo cp /etc/redis.conf /etc/redis.conf.bak
+    sudo sed -i -e "s/^# \(unixsocket\) .\+$/\1 \/var\/run\/redis\/redis.sock/" /etc/redis.conf
+    sudo sed -i -e "s/^# \(unixsocketperm\) .\+$/\1 770/" /etc/redis.conf
+    sudo gpasswd -a git redis
+    success "Edited file: /etc/redis.conf"
+  else
+    skip "Already edited: /etc/redis.conf"
+  fi
+
+  start_service redis
+  enable_service redis
+
+  if [ ! -d $git_home ]; then
+    notice "Add user: git"
+    sudo useradd -c 'GitLab' -s /bin/bash git
+    #sudo passwd git
+    success "Added user: git"
+  else
+    skip "Already added user: git"
+  fi
+
+  if mysqladmin create $gitlab_database > /dev/null 2>&1; then
+    notice "Create database (with user): $gitlab_database"
+    mysql -u root -e "CREATE USER 'git'@'localhost' IDENTIFIED BY 'git';"
+    mysql -u root -e "GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, DROP, INDEX, ALTER ON $gitlab_database.* TO 'git'@'localhost';"
+    success "Created database (with user): $gitlab_database"
+  else
+    skip "Already exists database: $gitlab_database"
+  fi
+
+  if sudo test ! -d $git_home/gitlab-shell; then
+    notice "Install: gitlab-shell (by git)"
+
+    sudo -u git sh -c "cd $git_home && git clone --single-branch https://github.com/gitlabhq/gitlab-shell.git -b v2.5.4"
+    sudo -u git sh -c "sed -e 's/^\(gitlab_url:\).\+$/\1 \"http:\/\/$SERVER_FQDN\/\"/' $git_home/gitlab-shell/config.yml.example > $git_home/gitlab-shell/config.yml"
+    sudo -u git sh -c "cd $git_home/gitlab-shell && ./bin/install"
+
+    success "Installed: gitlab-shell (by git)"
+  else
+    skip "Already installed: gitlab-shell (by git)"
+  fi
+
+  if sudo test ! -d $gitlab_dir; then
+    notice "Install: gitlab (by git)"
+    sudo -u git sh -c "cd $git_home && git clone --single-branch https://github.com/gitlabhq/gitlabhq.git gitlab -b v7.8.4"
+    success "Installed: gitlab (by git)"
+  else
+    skip "Already installed: gitlab (by git)"
+  fi
+
+  if sudo test ! -f $gitlab_dir/config/gitlab.yml; then
+    notice "Create file: $gitlab_dir/config/gitlab.yml"
+    sudo -u git sh -c "cd $gitlab_dir && cp config/gitlab.yml.example config/gitlab.yml"
+    sudo -u git sh -c "cd $gitlab_dir && sed -i -e 's/^\(\s\+host:\).\+$/\1 $SERVER_FQDN/' config/gitlab.yml"
+    sudo -u git sh -c "cd $gitlab_dir && sed -i -e 's/^\(\s\+email_from:\).\+$/\1 root@localhost/' config/gitlab.yml"
+    success "Created file: $gitlab_dir/config/gitlab.yml"
+  else
+    skip "Already exists: $gitlab_dir/config/gitlab.yml"
+  fi
+
+  if sudo test ! -f $gitlab_dir/config/unicorn.rb; then
+    notice "Create file: $gitlab/config/unicorn.yml"
+    sudo -u git sh -c "cd $gitlab_dir && cp config/unicorn.rb.example config/unicorn.rb"
+    success "Created file: $gitlab_dir/config/unicorn.yml"
+  else
+    skip "Already exists: $gitlab_dir/config/unicorn.yml"
+  fi
+
+  if sudo test ! -f $gitlab_dir/config/database.yml; then
+    notice "Create file: $gitlab_dir/config/database.yml"
+    sudo -u git sh -c "cd $gitlab_dir && cp config/database.yml.mysql config/database.yml"
+    sudo -u git sh -c "cd $gitlab_dir && sed -i -e 's/^\(\s\+username:\).\+$/\1 git/' config/database.yml"
+    sudo -u git sh -c "cd $gitlab_dir && sed -i -e 's/^\(\s\+password:\).\+$/\1 git/' config/database.yml"
+    success "Created file: $gitlab_dir/config/database.yml"
+  else
+    skip "Already exists: $gitlab_dir/config/database.yml"
+  fi
+
+  if sudo test ! -d $gitlab_dir/vendor/bundle; then
+    notice "Install: bundle gems"
+    sudo -u git sh -c "cd $gitlab_dir && bundle install --deployment --without development test postgres --path vendor/bundle"
+    sudo -u git sh -c "cd $gitlab_dir && bundle exec rake gitlab:setup RAILS_ENV=production"
+    sudo -u git sh -c "cd $gitlab_dir && bundle exec rake assets:precompile RAILS_ENV=production"
+    success "Installed: bundle gems"
+  else
+    skip "Already installed: bundle gems"
+  fi
+
+  if [ ! -f /etc/logrotate.d/gitlab ]; then
+    notice "Create file: /etc/logrotate.d/gitlab"
+    sudo cp $gitlab_dir/lib/support/logrotate/gitlab /etc/logrotate.d/gitlab
+    success "Created file: /etc/logrotate.d/gitlab"
+  else
+    skip "Already exists: /etc/logrotate.d/gitlab"
+  fi
+
+  if [ ! -f /etc/init.d/gitlab ]; then
+    notice "Create file: /etc/init.d/gitlab"
+    sudo cp $gitlab_dir/lib/support/init.d/gitlab /etc/init.d/gitlab
+    sudo cp $gitlab_dir/lib/support/init.d/gitlab.default.example /etc/default/gitlab
+    sudo chkconfig --add gitlab
+    success "Created file: /etc/init.d/gitlab"
+  else
+    skip "Already exists: /etc/init.d/gitlab"
+  fi
+
+  start_service gitlab
+  enable_service gitlab
+
+  if [ ! -f /etc/nginx/conf.d/gitlab.conf ]; then
+    sudo cp $gitlab_dir/lib/support/nginx/gitlab /etc/nginx/conf.d/gitlab.conf
+    sudo sed -i -e "s/^\(\s\+server_name\).\+$/\1 $SERVER_FQDN/" /etc/nginx/conf.d/gitlab.conf
+    sudo mv /etc/nginx/conf.d/default.conf /etc/nginx/conf.d/default.conf.bak
+    sudo gpasswd -a nginx git
+    sudo chmod g+rx /home/git/
+    sudo service nginx reload
+  fi
+}
+
+help()
+{
+  echo "Usage: `basename $0` [-f server_fqdn]"
+}
+
+while getopts "f:" flag; do
+  case $flag in
+    f) SERVER_FQDN="$OPTARG";;
+    *) help; exit 1;;
+  esac
+done
 
 main
 
