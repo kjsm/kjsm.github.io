@@ -9,37 +9,93 @@ main()
   fi
   . $HOME/.shutils
 
-  setup_ssh_keys
+  generate_ssh_key
+  create_authorized_keys
+
+  install_brew_and_brew_packages
+
   setup_dotfiles
+  change_default_shell_to_zsh
+  create_git_config_local
+  create_mysql_config
 }
 
-setup_ssh_keys()
+generate_ssh_key()
+{
+  local readonly private_key_path="$HOME/.ssh/id_rsa"
+
+  if [ ! -f $private_key_path ]; then
+    notice "Generate: $private_key_path"
+    ssh-keygen -t rsa -f $private_key_path -N "" -C "$USER@`uname -n`"
+    success
+  else
+    skip "Already exists: $private_key_path"
+  fi
+}
+
+create_authorized_keys()
 {
   local readonly ssh_dir="$HOME/.ssh"
-  local readonly private_key_path="$ssh_dir/id_rsa"
   local readonly public_key_path="$ssh_dir/id_rsa.pub"
   local readonly authorized_keys_path="$ssh_dir/authorized_keys"
-  local host_os_public_key
 
-  # generate ssh key
-  if [ ! -f $private_key_path ]; then
-    ssh-keygen -t rsa -f $private_key_path -N "" -C "$USER@`uname -n`"
-    success "generate ssh key"
-  fi
-
-  # create authorized_keys file
   if [ ! -f $authorized_keys_path ]; then
+    notice "Create: $authorized_keys_path"
     cat $public_key_path >> $authorized_keys_path
     chmod 600 $authorized_keys_path
-    success "create authorized_keys file"
+    success
 
-    # add host os public key
-    input "Input host os public key"
-    read host_os_public_key
-    if [ -n "$host_os_public_key" ]; then
-      echo "$host_os_public_key" >> $authorized_keys_path
-      success "add host os public key"
+    notice "Please paste your host public key (if you want to register to authorized_keys)"
+    local register_key
+    read register_key
+    if [ -n "$register_key" ]; then
+      echo "$register_key" >> $authorized_keys_path
+      success
+    else
+      skip "Not do anything"
     fi
+  else
+    skip "Already exists: $authorized_keys_path"
+  fi
+}
+
+install_brew_and_brew_packages()
+{
+  if [ "$INSTALL_BREW_AND_BREW_PACKAGES" != "1" ]; then
+    return 0
+  fi
+  
+  if [ ! -d $HOME/.linuxbrew ]; then
+    notice "Install: linuxbrew dependency packages"
+    sudo yum -y groupinstall 'Development Tools'
+    for package in m4 ruby ruby-irb texinfo bzip2-devel curl-devel expat-devel ncurses-devel
+    do
+      install $package
+    done
+    success
+
+    notice "Install: linuxbrew"
+    ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/linuxbrew/go/install)"
+    success
+
+    notice "Update: linuxbrew"
+    export PATH="$HOME/.linuxbrew/bin:$PATH"
+    brew update
+    brew_installed pkg-config || brew_install pkg-config
+    if brew doctor | grep "Your system is ready to brew" > /dev/null; then
+      success
+    else
+      error "System is not ready (by brew doctor)"
+      exit 1
+    fi
+
+    brew_installed ncurses || brew_install homebrew/dupes/ncurses
+    brew_installed perl || brew_install perl
+    brew_installed vim || brew_install vim --override-system-vi
+    brew_installed tmux || brew_install tmux
+    brew_installed zsh || brew_install zsh
+  else
+    skip "Already installed: linuxbrew"
   fi
 }
 
@@ -52,7 +108,7 @@ setup_dotfiles()
     echo -e "\n$(cat $HOME/.ssh/id_rsa.pub)\n"
     enter
 
-    input "Input the dotfiles repository location"
+    notice "Input the dotfiles repository location"
     local dotfiles_repository
     read dotfiles_repository
     if [ -z "$dotfiles_repository" ]; then
@@ -60,44 +116,92 @@ setup_dotfiles()
       exit 1
     fi
 
+    notice "Clone repository: $dotfiles_repository"
     if ! git clone $dotfiles_repository $dotfiles_dir; then
       error "failed clone repository"
       exit 1
     fi
+    success
+  else
+    skip "Already cloned repository: $dotfiles_dir"
   fi
 
-  if [ ! -d $HOME/.vim ]; then
-    # git submodule init and update (vim plugins)
+  if [ ! -d $HOME/.zsh ]; then
+    notice "Initialize and update git submodules (vim plugins)"
     cd $dotfiles_dir
     git submodule init
     git submodule update
     cd
-    success "setup vim plugins"
+    success
 
-    # create symlinks for dotfiles
+    notice "Create symbolic links to all dotfiles"
     $dotfiles_dir/script/dotfiles_linker.sh link
-    success "create symlinks for dotfiles"
-
-    # create .gitconfig.local
-    if [ ! -f $HOME/.gitconfig.local ]; then
-      cat > $HOME/.gitconfig.local <<__END__
-[user]
-  name = $USER
-  email = $USER@`uname -n`
-__END__
-      success "create .gitconfig.local"
-    fi
-
-    # change shell to zsh
-    if [ `basename $SHELL` != "zsh" ]; then
-      sudo sed -i -e "s/^\($USER:.\+\):.\+/\1:\/bin\/zsh/" /etc/passwd
-      success "change default shell to zsh"
-    fi
-
-    notice "Please login again, and check keychain, zsh, tmux, and vim"
-    exit 0
+    success
+  else
+    skip "Already initialized: $dotfiles_dir"
   fi
 }
+
+change_default_shell_to_zsh()
+{
+  if [ "$(basename $SHELL)" != "zsh" ]; then
+    notice "Change default shell: zsh"
+    if [ "$INSTALL_BREW_AND_BREW_PACKAGES" = "1" ] && [ -x $brew_dir/bin/zsh ]; then
+      sudo sed -i -e "s/^\($USER:.\+\):.\+/\1:\/home\/$USER\/.linuxbrew\/bin\/zsh/" /etc/passwd
+    else
+      sudo sed -i -e "s/^\($USER:.\+\):.\+/\1:\/bin\/zsh/" /etc/passwd
+    fi
+    success
+  else
+    skip "Already changed default shell: zsh"
+  fi
+}
+
+create_git_config_local()
+{
+  local readonly git_config_local="$HOME/.gitconfig.local"
+
+  if [ ! -f $git_config_local ]; then
+    notice "Create: $git_config_local"
+    cat > $git_config_local <<__END__
+[user]
+  name =
+  email =
+__END__
+    success
+  else
+    skip "Already exists: $git_config_local"
+  fi
+}
+
+create_mysql_config()
+{
+  local readonly mysql_config="$HOME/.my.cnf"
+
+  if [ ! -f $mysql_config ]; then
+    notice "Create: $mysql_config"
+    cat > $mysql_config <<__END__
+[client]
+user = root
+__END__
+    chmod 600 $mysql_config
+    success
+  else
+    skip "Already exists: $mysql_config"
+  fi
+}
+
+help()
+{
+  echo "Usage: `basename $0` [-b]"
+}
+
+while getopts "b" flag; do
+  case $flag in
+    b) INSTALL_BREW_AND_BREW_PACKAGES="1";;
+    *) help; exit 1;;
+  esac
+done
 
 main
 
