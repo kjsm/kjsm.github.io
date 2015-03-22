@@ -48,7 +48,7 @@ setup_mysql_config()
 # Include files in /etc/my.cnf.d
 !includedir     /etc/my.cnf.d
 __END__"
-    success "Edited file: $mysql_config_path"
+    success
   else
     skip "Already edited: $mysql_config_path"
   fi
@@ -56,7 +56,7 @@ __END__"
   if [ ! -f $mysql_user_config_path ]; then
     notice "Create file: $mysql_user_config_path"
     sudo sh -c "curl http://kjsm.github.io/centos/mysql-5.6.cnf > $mysql_user_config_path"
-    success "Created file: $mysql_user_config_path"
+    success
   else
     skip "Already exists: $mysql_user_config_path"
   fi
@@ -108,7 +108,7 @@ install_ruby()
   if [ ! -d $rbenv_dir/versions/$ruby_version ]; then
     notice "Install: ruby $ruby_version (by rbenv)"
     sudo sh -c "source /etc/profile.d/rbenv.sh && rbenv install $ruby_version && rbenv global $ruby_version"
-    success "Installed: ruby $ruby_version (by rbenv)"
+    success
   else
     skip "Already installed: ruby $ruby_version"
   fi
@@ -127,7 +127,7 @@ install_rbenv()
     notice "Install: rbenv (by git)"
     sudo git clone -q git://github.com/sstephenson/rbenv.git $rbenv_dir
     sudo mkdir $rbenv_dir/plugins
-    success "Installed: rbenv (by git)"
+    success
   else
     skip "Already installed: rbenv"
   fi
@@ -139,7 +139,7 @@ export RBENV_ROOT=\"$rbenv_dir\"
 export PATH=\"\$RBENV_ROOT/bin:\$PATH\"
 eval \"\$(rbenv init -)\"
 __END__"
-    success "Created file: $rbenv_init_file"
+    success
   else
     skip "Already exists: $rbenv_init_file"
   fi
@@ -153,7 +153,7 @@ Defaults     env_keep += \"RBENV_ROOT\"
 Defaults     secure_path = \"/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/rbenv/bin:/usr/local/rbenv/shims\"
 __END__"
     sudo chmod 440 /etc/sudoers
-    success "Created file: $sudo_file"
+    success
   else
     skip "Already exists: $sudo_file"
   fi
@@ -161,7 +161,7 @@ __END__"
   if sudo test ! -f $gemrc_file; then
     notice "Create file: $gemrc_file"
     sudo sh -c "echo \"gem: --no-ri --no-rdoc\" > $gemrc_file"
-    success "Created file: $gemrc_file"
+    success
   else
     skip "Already exists: $gemrc_file"
   fi
@@ -179,7 +179,7 @@ install_ruby_build()
   if [ ! -d $rbenv_dir/plugins/ruby-build ]; then
     notice "Install: ruby-build (by git)"
     sudo git clone -q git://github.com/sstephenson/ruby-build.git $rbenv_dir/plugins/ruby-build
-    success "Installed: ruby-build (by git)"
+    success
   else
     skip "Already installed: ruby-build"
   fi
@@ -193,7 +193,7 @@ install_rbenv_default_gems()
   if [ ! -d $rbenv_dir/plugins/rbenv-default-gems ]; then
     notice "Install: rbenv-default-gems (by git)"
     sudo git clone -q git://github.com/sstephenson/rbenv-default-gems.git $rbenv_dir/plugins/rbenv-default-gems
-    success "Installed: rbenv-default-gems (by git)"
+    success
   else
     skip "Already installed: rbenv-default-gems"
   fi
@@ -203,7 +203,7 @@ install_rbenv_default_gems()
     sudo sh -c "cat > $rbenv_dir/default-gems <<'__END__'
 bundler
 __END__"
-    success "Created file: $default_gems_file"
+    success
   else
     skip "Already exists: $default_gems_file"
   fi
@@ -236,8 +236,7 @@ install_gitlab()
     sudo cp /etc/redis.conf /etc/redis.conf.bak
     sudo sed -i -e "s/^# \(unixsocket\) .\+$/\1 \/var\/run\/redis\/redis.sock/" /etc/redis.conf
     sudo sed -i -e "s/^# \(unixsocketperm\) .\+$/\1 770/" /etc/redis.conf
-    sudo gpasswd -a git redis
-    success "Edited file: /etc/redis.conf"
+    success
   else
     skip "Already edited: /etc/redis.conf"
   fi
@@ -248,8 +247,9 @@ install_gitlab()
   if [ ! -d $git_home ]; then
     notice "Add user: git"
     sudo useradd -c 'GitLab' -s /bin/bash git
+    sudo gpasswd -a git redis
     #sudo passwd git
-    success "Added user: git"
+    success
   else
     skip "Already added user: git"
   fi
@@ -258,7 +258,7 @@ install_gitlab()
     notice "Create database (with user): $gitlab_database"
     mysql -u root -e "CREATE USER 'git'@'localhost' IDENTIFIED BY 'git';"
     mysql -u root -e "GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, DROP, INDEX, ALTER ON $gitlab_database.* TO 'git'@'localhost';"
-    success "Created database (with user): $gitlab_database"
+    success
   else
     skip "Already exists database: $gitlab_database"
   fi
@@ -270,7 +270,7 @@ install_gitlab()
     sudo -u git sh -c "sed -e 's/^\(gitlab_url:\).\+$/\1 \"http:\/\/$SERVER_FQDN\/\"/' $git_home/gitlab-shell/config.yml.example > $git_home/gitlab-shell/config.yml"
     sudo -u git sh -c "cd $git_home/gitlab-shell && ./bin/install"
 
-    success "Installed: gitlab-shell (by git)"
+    success
   else
     skip "Already installed: gitlab-shell (by git)"
   fi
@@ -278,7 +278,7 @@ install_gitlab()
   if sudo test ! -d $gitlab_dir; then
     notice "Install: gitlab (by git)"
     sudo -u git sh -c "cd $git_home && git clone --single-branch https://github.com/gitlabhq/gitlabhq.git gitlab -b v7.8.4"
-    success "Installed: gitlab (by git)"
+    success
   else
     skip "Already installed: gitlab (by git)"
   fi
@@ -288,7 +288,7 @@ install_gitlab()
     sudo -u git sh -c "cd $gitlab_dir && cp config/gitlab.yml.example config/gitlab.yml"
     sudo -u git sh -c "cd $gitlab_dir && sed -i -e 's/^\(\s\+host:\).\+$/\1 $SERVER_FQDN/' config/gitlab.yml"
     sudo -u git sh -c "cd $gitlab_dir && sed -i -e 's/^\(\s\+email_from:\).\+$/\1 root@localhost/' config/gitlab.yml"
-    success "Created file: $gitlab_dir/config/gitlab.yml"
+    success
   else
     skip "Already exists: $gitlab_dir/config/gitlab.yml"
   fi
@@ -296,7 +296,7 @@ install_gitlab()
   if sudo test ! -f $gitlab_dir/config/unicorn.rb; then
     notice "Create file: $gitlab/config/unicorn.yml"
     sudo -u git sh -c "cd $gitlab_dir && cp config/unicorn.rb.example config/unicorn.rb"
-    success "Created file: $gitlab_dir/config/unicorn.yml"
+    success
   else
     skip "Already exists: $gitlab_dir/config/unicorn.yml"
   fi
@@ -306,7 +306,7 @@ install_gitlab()
     sudo -u git sh -c "cd $gitlab_dir && cp config/database.yml.mysql config/database.yml"
     sudo -u git sh -c "cd $gitlab_dir && sed -i -e 's/^\(\s\+username:\).\+$/\1 git/' config/database.yml"
     sudo -u git sh -c "cd $gitlab_dir && sed -i -e 's/^\(\s\+password:\).\+$/\1 git/' config/database.yml"
-    success "Created file: $gitlab_dir/config/database.yml"
+    success
   else
     skip "Already exists: $gitlab_dir/config/database.yml"
   fi
@@ -316,7 +316,7 @@ install_gitlab()
     sudo -u git sh -c "cd $gitlab_dir && bundle install --deployment --without development test postgres --path vendor/bundle"
     sudo -u git sh -c "cd $gitlab_dir && bundle exec rake gitlab:setup RAILS_ENV=production"
     sudo -u git sh -c "cd $gitlab_dir && bundle exec rake assets:precompile RAILS_ENV=production"
-    success "Installed: bundle gems"
+    success
   else
     skip "Already installed: bundle gems"
   fi
@@ -324,7 +324,7 @@ install_gitlab()
   if [ ! -f /etc/logrotate.d/gitlab ]; then
     notice "Create file: /etc/logrotate.d/gitlab"
     sudo cp $gitlab_dir/lib/support/logrotate/gitlab /etc/logrotate.d/gitlab
-    success "Created file: /etc/logrotate.d/gitlab"
+    success
   else
     skip "Already exists: /etc/logrotate.d/gitlab"
   fi
@@ -334,7 +334,7 @@ install_gitlab()
     sudo cp $gitlab_dir/lib/support/init.d/gitlab /etc/init.d/gitlab
     sudo cp $gitlab_dir/lib/support/init.d/gitlab.default.example /etc/default/gitlab
     sudo chkconfig --add gitlab
-    success "Created file: /etc/init.d/gitlab"
+    success
   else
     skip "Already exists: /etc/init.d/gitlab"
   fi

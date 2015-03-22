@@ -12,14 +12,12 @@ install()
 
   if ! installed $package; then
     notice "Install: $package"
-
     if [ $USER = "root" ]; then
       yum install -q -y $options $package
     else
       sudo yum install -q -y $options $package
     fi
-
-    success "Installed: $package"
+    success
   else
     skip "Already installed: $package"
   fi
@@ -36,14 +34,12 @@ uninstall()
 
   if installed $package; then
     notice "Uninstall: $package"
-
     if [ $USER = "root" ]; then
       yum remove $package
     else
       sudo yum remove $package
     fi
-
-    success "Uninstalled: $package"
+    success
   else
     skip "Not installed: $package"
   fi
@@ -89,7 +85,7 @@ install_repository()
   if [ ! -f $local_path ]; then
     notice "Install repository: $name"
     sudo yum install -q -y $url
-    success "Installed repository: $name"
+    success
   else
     skip "Already installed: $name"
   fi
@@ -109,7 +105,7 @@ start_service()
   else
     notice "Start service: $service"
     sudo service $service start > /dev/null 2>&1
-    success "Started service: $service"
+    success
   fi
 }
 
@@ -127,7 +123,7 @@ enable_service()
   else
     notice "Enable service: $service"
     sudo chkconfig $service on
-    success "Enabled service: $service"
+    success
   fi
 }
 
@@ -143,7 +139,7 @@ brew_install()
 
   brew install $package $options
 
-  success "install $package (by brew)"
+  success "Install: $package (by brew)"
 }
 
 brew_installed()
