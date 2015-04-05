@@ -247,11 +247,25 @@ install_gitlab()
   if [ ! -d $git_home ]; then
     notice "Add user: git"
     sudo useradd -c 'GitLab' -s /bin/bash git
+    sudo passwd git
     sudo gpasswd -a git redis
-    #sudo passwd git
     success
   else
     skip "Already added user: git"
+  fi
+
+  if sudo test ! -f $git_home/.gitconfig; then
+    notice "Create file: $git_home/.gitconfig"
+    sudo -u git sh -c "cat > $git_home/.gitconfig <<'__END__'
+[user]
+  name = GitLab
+  email = root@localhost
+[core]
+  autocrlf = input
+__END__"
+    success
+  else
+    skip "Already exists: $git_home/.gitconfig"
   fi
 
   if mysqladmin create $gitlab_database > /dev/null 2>&1; then
@@ -345,7 +359,6 @@ install_gitlab()
   if [ ! -f /etc/nginx/conf.d/gitlab.conf ]; then
     sudo cp $gitlab_dir/lib/support/nginx/gitlab /etc/nginx/conf.d/gitlab.conf
     sudo sed -i -e "s/^\(\s\+server_name\).\+$/\1 $SERVER_FQDN/" /etc/nginx/conf.d/gitlab.conf
-    sudo mv /etc/nginx/conf.d/default.conf /etc/nginx/conf.d/default.conf.bak
     sudo gpasswd -a nginx git
     sudo chmod g+rx /home/git/
     sudo service nginx reload
