@@ -77,6 +77,7 @@ install_brew_and_brew_packages()
     notice "Install: linuxbrew"
     ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/linuxbrew/go/install)"
     success
+    uninstall ruby
 
     notice "Update: linuxbrew"
     export PATH="$HOME/.linuxbrew/bin:$PATH"
